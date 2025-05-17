@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 const PROVIDERS = [
   {
@@ -36,36 +39,113 @@ const PROVIDERS = [
 const PaymentProvidersSettings: React.FC = () => {
   const [apiKeys, setApiKeys] = useState<{ [provider: string]: { [field: string]: string } }>({});
   const [activeProviders, setActiveProviders] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedKeys = localStorage.getItem('paymentApiKeys');
-    const storedActive = localStorage.getItem('activePaymentProviders');
-    if (storedKeys) setApiKeys(JSON.parse(storedKeys));
-    if (storedActive) setActiveProviders(JSON.parse(storedActive));
+    fetchSettings();
   }, []);
 
-  const handleKeyChange = (provider: string, field: string, value: string) => {
-    const newKeys = {
-      ...apiKeys,
-      [provider]: {
-        ...(apiKeys[provider] || {}),
-        [field]: value,
-      },
-    };
-    setApiKeys(newKeys);
-    localStorage.setItem('paymentApiKeys', JSON.stringify(newKeys));
+  const fetchSettings = async () => {
+    try {
+      // Fetch encrypted API keys
+      const { data: keysData, error: keysError } = await supabase
+        .from('payment_provider_settings')
+        .select('*');
+
+      if (keysError) throw keysError;
+
+      // Decrypt and set API keys
+      const decryptedKeys: { [provider: string]: { [field: string]: string } } = {};
+      keysData?.forEach((setting) => {
+        if (!decryptedKeys[setting.provider]) {
+          decryptedKeys[setting.provider] = {};
+        }
+        decryptedKeys[setting.provider][setting.field] = decrypt(setting.encrypted_value);
+      });
+      setApiKeys(decryptedKeys);
+
+      // Fetch active providers
+      const { data: activeData, error: activeError } = await supabase
+        .from('active_payment_providers')
+        .select('provider');
+
+      if (activeError) throw activeError;
+
+      setActiveProviders(activeData?.map(p => p.provider) || []);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      toast.error('Failed to load payment provider settings');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleToggleActive = (provider: string) => {
-    let newActive: string[];
-    if (activeProviders.includes(provider)) {
-      newActive = activeProviders.filter((p) => p !== provider);
-    } else {
-      newActive = [...activeProviders, provider];
+  const handleKeyChange = async (provider: string, field: string, value: string) => {
+    try {
+      // Encrypt the value
+      const encryptedValue = encrypt(value);
+
+      // Update in database
+      const { error } = await supabase
+        .from('payment_provider_settings')
+        .upsert({
+          provider,
+          field,
+          encrypted_value: encryptedValue,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      setApiKeys(prev => ({
+        ...prev,
+        [provider]: {
+          ...(prev[provider] || {}),
+          [field]: value,
+        },
+      }));
+
+      toast.success(`${provider} ${field} updated successfully`);
+    } catch (error) {
+      console.error('Error updating key:', error);
+      toast.error('Failed to update API key');
     }
-    setActiveProviders(newActive);
-    localStorage.setItem('activePaymentProviders', JSON.stringify(newActive));
   };
+
+  const handleToggleActive = async (provider: string) => {
+    try {
+      let newActive: string[];
+      if (activeProviders.includes(provider)) {
+        newActive = activeProviders.filter((p) => p !== provider);
+        // Remove from database
+        const { error } = await supabase
+          .from('active_payment_providers')
+          .delete()
+          .eq('provider', provider);
+
+        if (error) throw error;
+      } else {
+        newActive = [...activeProviders, provider];
+        // Add to database
+        const { error } = await supabase
+          .from('active_payment_providers')
+          .insert({ provider });
+
+        if (error) throw error;
+      }
+
+      setActiveProviders(newActive);
+      toast.success(`${provider} ${newActive.includes(provider) ? 'activated' : 'deactivated'} successfully`);
+    } catch (error) {
+      console.error('Error toggling provider:', error);
+      toast.error('Failed to update provider status');
+    }
+  };
+
+  if (loading) {
+    return <div>Loading payment provider settings...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -89,7 +169,7 @@ const PaymentProvidersSettings: React.FC = () => {
                   <label className="text-sm font-medium mb-1" htmlFor={`${p.key}-${field.key}`}>{field.label}</label>
                   <Input
                     id={`${p.key}-${field.key}`}
-                    type="text"
+                    type="password"
                     placeholder={`Enter ${p.label} ${field.label}`}
                     value={apiKeys[p.key]?.[field.key] || ''}
                     onChange={e => handleKeyChange(p.key, field.key, e.target.value)}

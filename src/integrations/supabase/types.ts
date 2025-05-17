@@ -88,28 +88,28 @@ export type Database = {
       }
       messages: {
         Row: {
-          content: string
+          message: string
           created_at: string
           deal_id: string
           id: string
-          is_read: boolean
           sender_email: string
+          read_by?: string[]
         }
         Insert: {
-          content: string
+          message: string
           created_at?: string
           deal_id: string
           id?: string
-          is_read?: boolean
           sender_email: string
+          read_by?: string[]
         }
         Update: {
-          content?: string
+          message?: string
           created_at?: string
           deal_id?: string
           id?: string
-          is_read?: boolean
           sender_email?: string
+          read_by?: string[]
         }
         Relationships: [
           {
@@ -120,6 +120,204 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      chat_typing: {
+        Row: {
+          id: string;
+          deal_id: string;
+          user_email: string;
+          is_typing: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          deal_id: string;
+          user_email: string;
+          is_typing?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          deal_id?: string;
+          user_email?: string;
+          is_typing?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      }
+      notifications: {
+        Row: {
+          id: string;
+          user_email: string;
+          type: string;
+          message: string;
+          deal_id: string | null;
+          read: boolean;
+          created_at: string;
+          link: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_email: string;
+          type: string;
+          message: string;
+          deal_id?: string | null;
+          read?: boolean;
+          created_at?: string;
+          link?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_email?: string;
+          type?: string;
+          message?: string;
+          deal_id?: string | null;
+          read?: boolean;
+          created_at?: string;
+          link?: string | null;
+        };
+        Relationships: [];
+      },
+      notification_preferences: {
+        Row: {
+          id: string;
+          user_email: string;
+          type: string;
+          enabled: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_email: string;
+          type: string;
+          enabled?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_email?: string;
+          type?: string;
+          enabled?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      },
+      refund_requests: {
+        Row: {
+          id: string;
+          deal_id: string;
+          requested_by: string;
+          reason: string;
+          status: string;
+          admin_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          deal_id: string;
+          requested_by: string;
+          reason: string;
+          status?: string;
+          admin_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          deal_id?: string;
+          requested_by?: string;
+          reason?: string;
+          status?: string;
+          admin_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "refund_requests_deal_id_fkey";
+            columns: ["deal_id"];
+            isOneToOne: false;
+            referencedRelation: "deals";
+            referencedColumns: ["id"];
+          },
+        ];
+      },
+      deal_participants: {
+        Row: {
+          id: string;
+          deal_id: string;
+          email: string;
+          role: string;
+          joined_at: string;
+        };
+        Insert: {
+          id?: string;
+          deal_id: string;
+          email: string;
+          role: string;
+          joined_at?: string;
+        };
+        Update: {
+          id?: string;
+          deal_id?: string;
+          email?: string;
+          role?: string;
+          joined_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "deal_participants_deal_id_fkey";
+            columns: ["deal_id"];
+            isOneToOne: false;
+            referencedRelation: "deals";
+            referencedColumns: ["id"];
+          },
+        ];
+      },
+      chat_attachments: {
+        Row: {
+          id: string;
+          deal_id: string;
+          message_id: string | null;
+          uploaded_by: string;
+          file_url: string;
+          file_name: string;
+          file_type: string;
+          file_size: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          deal_id: string;
+          message_id?: string | null;
+          uploaded_by: string;
+          file_url: string;
+          file_name: string;
+          file_type: string;
+          file_size: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          deal_id?: string;
+          message_id?: string | null;
+          uploaded_by?: string;
+          file_url?: string;
+          file_name?: string;
+          file_type?: string;
+          file_size?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "chat_attachments_deal_id_fkey";
+            columns: ["deal_id"];
+            isOneToOne: false;
+            referencedRelation: "deals";
+            referencedColumns: ["id"];
+          },
+        ];
       }
     }
     Views: {

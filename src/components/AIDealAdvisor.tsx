@@ -15,25 +15,6 @@ interface AIDealAdvisorProps {
   onSuggestionSelect?: (suggestion: string) => void;
 }
 
-const SAMPLE_SUGGESTIONS = [
-  {
-    title: "Website Development Project",
-    description: "Agreement for the design and development of a responsive website with e-commerce functionality. Payment will be released upon successful completion and testing of all features. Includes:\n\n- 5-page responsive website\n- E-commerce integration\n- SEO optimization\n- 3 months of support\n- 2 rounds of revisions"
-  },
-  {
-    title: "Logo & Brand Design Package",
-    description: "Creation of a professional logo and brand identity package. Deliverables include:\n\n- Primary logo design\n- Alternative logo variations\n- Brand color palette\n- Typography guidelines\n- Social media assets\n- Brand usage guidelines\n\nPayment will be released upon approval of final designs with up to 3 revision rounds."
-  },
-  {
-    title: "Content Writing Services",
-    description: "Professional content writing package for your business. Includes:\n\n- 5 blog posts (1500 words each)\n- SEO optimization\n- Keyword research\n- Meta descriptions\n- Social media snippets\n\nPayment will be released upon approval of all articles with up to 2 revision rounds per article."
-  },
-  {
-    title: "Mobile App Development",
-    description: "Development of a cross-platform mobile application. Features include:\n\n- User authentication\n- Real-time data sync\n- Push notifications\n- Offline functionality\n- App store submission\n\nPayment will be released in milestones:\n1. 30% upon design approval\n2. 40% upon beta testing\n3. 30% upon app store approval"
-  }
-];
-
 const AIDealAdvisor: React.FC<AIDealAdvisorProps> = ({ onSuggestionSelect }) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -45,8 +26,7 @@ const AIDealAdvisor: React.FC<AIDealAdvisorProps> = ({ onSuggestionSelect }) => 
     
     // Simulate AI generation with a random suggestion
     setTimeout(() => {
-      const randomSuggestion = SAMPLE_SUGGESTIONS[Math.floor(Math.random() * SAMPLE_SUGGESTIONS.length)];
-      setGeneratedSuggestion(`${randomSuggestion.title}\n\n${randomSuggestion.description}`);
+      setGeneratedSuggestion(null);
       setIsGenerating(false);
     }, 1500);
   };
@@ -59,10 +39,7 @@ const AIDealAdvisor: React.FC<AIDealAdvisorProps> = ({ onSuggestionSelect }) => 
 
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category);
-    const suggestion = SAMPLE_SUGGESTIONS.find(s => s.title.toLowerCase().includes(category.toLowerCase()));
-    if (suggestion) {
-      setGeneratedSuggestion(`${suggestion.title}\n\n${suggestion.description}`);
-    }
+    setGeneratedSuggestion(null);
   };
 
   return (

@@ -1,6 +1,7 @@
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
+import { motion } from "framer-motion"
 
 import { cn } from "@/lib/utils"
 
@@ -12,22 +13,59 @@ const SelectValue = SelectPrimitive.Value
 
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
-      className
-    )}
-    {...props}
-  >
-    {children}
-    <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
-    </SelectPrimitive.Icon>
-  </SelectPrimitive.Trigger>
-))
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
+    error?: string
+    label?: string
+    helperText?: string
+  }
+>(({ className, children, error, label, helperText, ...props }, ref) => {
+  const id = React.useId()
+  
+  return (
+    <div className="space-y-2">
+      {label && (
+        <label
+          htmlFor={id}
+          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+        >
+          {label}
+        </label>
+      )}
+      <motion.div
+        whileFocus={{ scale: 1.01 }}
+        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      >
+        <SelectPrimitive.Trigger
+          ref={ref}
+          className={cn(
+            "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+            error && "border-destructive focus:ring-destructive",
+            className
+          )}
+          id={id}
+          aria-invalid={error ? "true" : "false"}
+          aria-describedby={error ? `${id}-error` : helperText ? `${id}-description` : undefined}
+          {...props}
+        >
+          {children}
+          <SelectPrimitive.Icon asChild>
+            <ChevronDown className="h-4 w-4 opacity-50" />
+          </SelectPrimitive.Icon>
+        </SelectPrimitive.Trigger>
+      </motion.div>
+      {error && (
+        <p className="text-sm text-destructive" id={`${id}-error`}>
+          {error}
+        </p>
+      )}
+      {helperText && !error && (
+        <p className="text-sm text-muted-foreground" id={`${id}-description`}>
+          {helperText}
+        </p>
+      )}
+    </div>
+  )
+})
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 
 const SelectScrollUpButton = React.forwardRef<

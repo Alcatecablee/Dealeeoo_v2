@@ -72,6 +72,13 @@ function FAQAccordionItem({ question, answer }) {
   );
 }
 
+const NOTIF_TYPES = [
+  { type: 'new_message', label: 'New Chat Messages' },
+  { type: 'deal_status', label: 'Deal Status Changes' },
+  { type: 'dispute', label: 'Disputes' },
+  { type: 'resolution', label: 'Dispute Resolutions' },
+];
+
 const Index = () => {
   const [scrolled, setScrolled] = useState(false);
   const [theme, setTheme] = useState(() => {
@@ -80,9 +87,8 @@ const Index = () => {
     }
     return 'light';
   });
-  const [waitlistEmail, setWaitlistEmail] = useState('');
-  const [waitlistLoading, setWaitlistLoading] = useState(false);
   const [tab, setTab] = useState('before');
+  const userEmail = localStorage.getItem('userEmail');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -103,21 +109,6 @@ const Index = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const handleWaitlistSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setWaitlistLoading(true);
-    try {
-      const { error } = await supabase.from('waitlist').insert({ email: waitlistEmail });
-      if (error) throw error;
-      toast.success('You have joined the waitlist!');
-      setWaitlistEmail('');
-    } catch (err) {
-      toast.error('Failed to join waitlist. Please try again.');
-    } finally {
-      setWaitlistLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-blue-50/50 dark:from-gray-900 dark:to-gray-950 transition-colors duration-500">
       <Header />
@@ -129,16 +120,16 @@ const Index = () => {
           <div className="flex flex-col lg:flex-row lg:items-center gap-12">
             <div className="flex-1 flex flex-col gap-4">
               <AnimatedSection delay={0}>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.15] pb-4 mb-6 bg-gradient-to-r from-friendly-blue to-friendly-purple bg-clip-text text-transparent text-left md:text-left">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.15] pb-4 mb-6 bg-gradient-to-r from-friendly-blue to-friendly-purple bg-clip-text text-transparent text-center md:text-left">
                   Trust Made Easy for Online Deals with Strangers
                 </h1>
-                <p className="text-lg md:text-xl text-friendly-blue font-semibold mb-4">
+                <p className="text-lg md:text-xl text-friendly-blue font-semibold mb-4 text-center md:text-left">
                   Your money is protected until the deal is done right.
                 </p>
               </AnimatedSection>
               
               <AnimatedSection delay={150}>
-                <p className="text-lg md:text-xl text-gray-400 mb-8 max-w-2xl">
+                <p className="text-lg md:text-xl text-gray-400 mb-8 max-w-2xl text-center md:text-left">
                   Powered by Stripe, Wise, and other trusted partners to keep your money safe from start to finish.
                 </p>
               </AnimatedSection>
@@ -151,9 +142,11 @@ const Index = () => {
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </Button>
                   </Link>
+                  <Link to="/how-to">
                   <Button className="bg-gradient-to-r from-friendly-blue to-friendly-purple text-white text-xl py-6 px-10 shadow-md font-bold rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-friendly-purple/40">
-                    Join Waitlist
+                      Learn More
                   </Button>
+                  </Link>
                 </div>
               </AnimatedSection>
             </div>
@@ -239,7 +232,8 @@ const Index = () => {
           <AnimatedSection delay={0}>
             <h2 className="text-4xl md:text-5xl font-extrabold leading-[1.15] pb-2 mb-2 text-center bg-gradient-to-r from-friendly-blue to-friendly-purple bg-clip-text text-transparent drop-shadow-lg">Why Use Dealeeoo?</h2>
             <p className="text-base md:text-lg text-center text-muted-foreground mb-10 max-w-2xl mx-auto">
-              You don't need an account or app — just create a deal and share the link. That's it.
+              No account needed. No apps to install.<br />
+              Just clean, link-based transactions with built-in trust — for real people, doing real deals.
             </p>
           </AnimatedSection>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -631,32 +625,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Waitlist Section above footer */}
-      <div className="container mx-auto px-4 max-w-7xl flex flex-col items-center justify-center py-12 mb-12">
-        <div className="bg-white/80 dark:bg-gray-900/80 rounded-2xl p-10 shadow-xl flex flex-col items-center backdrop-blur-lg border border-white/20 dark:border-blue-900/30 w-full relative overflow-hidden">
-          <h2 className="text-2xl font-bold mb-2 text-gradient-friendly">Join the Waitlist</h2>
-          <p className="text-muted-foreground mb-6 text-center">Get early access and updates. Enter your email below:</p>
-          <form onSubmit={handleWaitlistSubmit} className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-            <input
-              type="email"
-              required
-              placeholder="Your email"
-              className="flex-1 px-5 py-3 rounded-xl border-none bg-white/90 dark:bg-gray-800/80 text-foreground focus:outline-none focus:ring-2 focus:ring-friendly-blue/40 shadow-sm transition-all"
-              value={waitlistEmail}
-              onChange={e => setWaitlistEmail(e.target.value)}
-              disabled={waitlistLoading}
-            />
-            <button
-              type="submit"
-              className="bg-gradient-friendly text-white px-8 py-3 rounded-2xl font-bold shadow-md hover:opacity-95 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-friendly-blue/40"
-              disabled={waitlistLoading}
-            >
-              {waitlistLoading ? 'Joining...' : 'Join Waitlist'}
-            </button>
-          </form>
-        </div>
-      </div>
-
       {/* Payments Powered By Banner */}
       <section className="container mx-auto px-4 max-w-7xl flex flex-col items-center justify-center py-12 mb-12">
         <div className="bg-white/80 dark:bg-gray-900/80 rounded-2xl p-10 shadow-xl flex flex-col items-center backdrop-blur-lg border border-white/20 dark:border-blue-900/30 w-full relative overflow-hidden">
@@ -705,6 +673,7 @@ const Index = () => {
           </div>
         </div>
       </section>
+
       <style>{`
         @keyframes marquee {
           0% { transform: translateX(0); }
@@ -737,7 +706,7 @@ const Index = () => {
             </nav>
             <div className="flex gap-6">
               <a href="#" className="text-muted-foreground hover:text-friendly-blue"><svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M22.46 6c-.77.35-1.6.59-2.47.7a4.3 4.3 0 001.88-2.37 8.59 8.59 0 01-2.72 1.04A4.28 4.28 0 0016.11 4c-2.37 0-4.29 1.92-4.29 4.29 0 .34.04.67.11.99C7.69 9.13 4.07 7.38 1.64 4.7c-.37.64-.58 1.38-.58 2.17 0 1.5.76 2.82 1.92 3.6-.7-.02-1.36-.21-1.94-.53v.05c0 2.1 1.5 3.85 3.5 4.25-.36.1-.74.16-1.13.16-.28 0-.54-.03-.8-.08.54 1.7 2.1 2.94 3.95 2.97A8.6 8.6 0 012 19.54c-.29 0-.57-.02-.85-.05A12.13 12.13 0 007.29 21.5c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.36-.02-.54A8.18 8.18 0 0024 4.59a8.36 8.36 0 01-2.54.7z" fill="currentColor"/></svg></a>
-              <a href="#" className="text-muted-foreground hover:text-friendly-purple"><svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M12 2.04c-5.5 0-9.96 4.46-9.96 9.96 0 4.41 3.6 8.07 8.24 8.93.6.11.82-.26.82-.58v-2.02c-3.34.73-4.04-1.61-4.04-1.61-.54-1.37-1.32-1.74-1.32-1.08-.74.08-.73.08-.73 1.2.08 1.83 1.23 1.23 1.23 1.06 1.82 2.78 1.3 3.46.99.11-.77.42-1.3.76-1.6-2.67-.3-5.47-1.34-5.47-5.97 0-1.32.47-2.4 1.23-3.25-.12-.3-.53-1.52.12-3.17 0 0 1-.32 3.3 1.23a11.5 11.5 0 016 0c2.3-1.55 3.3-1.23 3.3-1.23.65 1.65.24 2.87.12 3.17.77.85 1.23 1.93 1.23 3.25 0 4.64-2.8 5.67-5.47 5.97.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.82.58C20.36 20.07 24 16.41 24 12c0-5.5-4.46-9.96-9.96-9.96z" fill="currentColor"/></svg></a>
+              <a href="#" className="text-muted-foreground hover:text-friendly-purple"><svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" fill="currentColor"/></svg></a>
               <a href="#" className="text-muted-foreground hover:text-friendly-green"><svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M21.54 7.2c.02.16.02.32.02.48 0 4.89-3.72 10.53-10.53 10.53-2.09 0-4.04-.61-5.68-1.66.29.03.57.05.87.05 1.74 0 3.34-.59 4.62-1.59-1.63-.03-3-1.1-3.47-2.57.23.04.47.07.72.07.34 0 .67-.05.98-.13-1.7-.34-2.98-1.85-2.98-3.66v-.05c.5.28 1.08.45 1.7.47a3.67 3.67 0 01-1.63-3.06c0-.67.18-1.3.5-1.84a10.5 10.5 0 007.62 3.87c-.06-.27-.09-.55-.09-.84 0-2.02 1.64-3.66 3.66-3.66 1.05 0 2 .44 2.67 1.15.83-.16 1.6-.47 2.3-.89-.27.85-.85 1.56-1.6 2.01.74-.09 1.45-.28 2.11-.57-.5.74-1.13 1.39-1.86 1.91z" fill="currentColor"/></svg></a>
             </div>
           </div>

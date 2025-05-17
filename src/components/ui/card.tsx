@@ -1,17 +1,20 @@
 import * as React from "react"
-
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
 
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
+  React.HTMLAttributes<HTMLDivElement> & { hover?: boolean }
+>(({ className, hover = true, ...props }, ref) => (
+  <motion.div
     ref={ref}
     className={cn(
       "rounded-lg border bg-card text-card-foreground shadow-sm",
+      hover && "transition-all duration-200 hover:shadow-md",
       className
     )}
+    whileHover={hover ? { y: -2 } : undefined}
+    transition={{ type: "spring", stiffness: 400, damping: 17 }}
     {...props}
   />
 ))

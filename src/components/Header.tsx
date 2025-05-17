@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, Users, DollarSign, Globe, Menu, Sparkles, Heart } from 'lucide-react';
+import { Shield, Users, DollarSign, Globe, Menu, Sparkles, Heart, Bell } from 'lucide-react';
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
+import { supabase } from '@/integrations/supabase/client';
 
 const scrollToSection = (id: string) => {
   const el = document.getElementById(id);
@@ -16,6 +17,72 @@ const Header: React.FC = () => {
   const [comingSoon, setComingSoon] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const userEmail = localStorage.getItem('userEmail'); // Or get from auth context if available
+
+  // Header hide/show on scroll
+  const [showHeader, setShowHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    fetchNotifications();
+    // Subscribe to notifications
+    const channel = supabase
+      .channel(`public:notifications:user_email=eq.${userEmail}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_email=eq.${userEmail}`
+      }, (payload) => {
+        fetchNotifications();
+      })
+      .subscribe();
+    return () => { channel.unsubscribe(); };
+  }, [userEmail]);
+
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentY = window.scrollY;
+          if (currentY < 10 || currentY < lastScrollY) {
+            setShowHeader(true);
+          } else if (currentY > lastScrollY) {
+            setShowHeader(false);
+          }
+          setLastScrollY(currentY);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
+  const fetchNotifications = async () => {
+    if (!userEmail) return;
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_email', userEmail)
+      .order('created_at', { ascending: false });
+    if (!error && data) {
+      setNotifications(data);
+      setUnreadCount(data.filter((n: any) => !n.read).length);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!userEmail) return;
+    await supabase.from('notifications').update({ read: true }).eq('user_email', userEmail).eq('read', false);
+    fetchNotifications();
+  };
 
   // Helper to scroll or navigate then scroll
   const handleNav = (section: string) => {
@@ -28,19 +95,20 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-background border-b border-border sticky top-0 z-50 text-foreground">
+    <header className={`bg-background border-b border-border sticky top-0 z-50 text-foreground transition-transform duration-300 ${showHeader ? 'translate-y-0' : '-translate-y-full'}`} style={{ willChange: 'transform' }}>
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center flex-shrink-0">
-          <Link to="/" className="text-2xl font-bold flex items-center gap-2 gradient-text animate-pulse-soft">
-            <div className="p-2 rounded-full bg-gradient-friendly text-white">
-              <Shield className="h-6 w-6" />
-            </div>
-            Dealeeoo
+          <Link to="/">
+            <img src="/logo.png" alt="Dealeeoo" className="h-16 w-auto" />
           </Link>
         </div>
         {/* Centered Nav */}
         <nav className="hidden md:flex flex-1 justify-center space-x-6">
+          <Link to="/" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 focus:outline-none">
+            <Globe className="h-4 w-4" />
+            <span>Home</span>
+          </Link>
           <Link to="/how-to" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 focus:outline-none">
             <Sparkles className="h-4 w-4" />
             <span>How It Works</span>
@@ -60,15 +128,68 @@ const Header: React.FC = () => {
         </nav>
         {/* Create Deal Button - right aligned, pops out */}
         <div className="hidden md:flex items-center flex-shrink-0 ml-4">
-          <Link to="/create-deal">
+          {/* Notification Bell */}
+          <div className="relative mr-4">
+            <button
+              className="relative focus:outline-none"
+              onClick={() => {
+                setShowDropdown((v) => !v);
+                if (unreadCount > 0) markAllAsRead();
+              }}
+              aria-label="Notifications"
+            >
+              <Bell className="h-6 w-6 text-primary" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{unreadCount}</span>
+              )}
+            </button>
+            {showDropdown && (
+              <div className="absolute right-0 mt-2 w-80 bg-white border border-border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                <div className="p-4 border-b border-border font-semibold">Notifications</div>
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-muted-foreground text-sm">No notifications</div>
+                ) : (
+                  notifications.slice(0, 10).map((n) => (
+                    n.link ? (
+                      <button
+                        key={n.id}
+                        className={`w-full text-left p-3 border-b border-border text-sm hover:bg-blue-100 transition ${!n.read ? 'bg-blue-50' : ''}`}
+                        onClick={() => { setShowDropdown(false); navigate(n.link); }}
+                      >
+                        <div className="font-medium">{n.type.replace(/_/g, ' ')}</div>
+                        <div>{n.message}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                      </button>
+                    ) : (
+                      <div key={n.id} className={`p-3 border-b border-border text-sm ${!n.read ? 'bg-blue-50' : ''}`}>
+                        <div className="font-medium">{n.type.replace(/_/g, ' ')}</div>
+                        <div>{n.message}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                      </div>
+                    )
+                  ))
+                )}
+                <div className="p-2 text-center">
+                  <button className="text-primary text-xs underline" onClick={() => setShowDropdown(false)}>Close</button>
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Existing Create Deal Button */}
             <Button 
               className="bg-gradient-to-r from-friendly-blue via-friendly-purple to-friendly-green text-white font-bold shadow-lg hover:scale-105 hover:shadow-xl transition-all duration-300 flex items-center gap-2 px-6 py-2 border-0 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-friendly-blue"
               style={{ boxShadow: '0 4px 24px 0 rgba(80, 72, 229, 0.15)' }}
+            onClick={() => {
+              if (location.pathname === '/create-deal') {
+                window.location.reload();
+              } else {
+                navigate('/create-deal');
+              }
+            }}
             >
               <DollarSign className="h-4 w-4" />
               Create Deal
             </Button>
-          </Link>
         </div>
         {/* Mobile menu */}
         <div className="md:hidden">
@@ -97,13 +218,19 @@ const Header: React.FC = () => {
                   Contact
                 </button>
                 <div className="h-px bg-border my-2"></div>
-                <Link 
-                  to="/create-deal" 
+                <button
                   className="text-lg font-medium text-primary flex items-center gap-2 hover:text-opacity-80 transition-colors"
+                  onClick={() => {
+                    if (location.pathname === '/create-deal') {
+                      window.location.reload();
+                    } else {
+                      navigate('/create-deal');
+                    }
+                  }}
                 >
                   <DollarSign className="h-5 w-5" />
                   Create Deal
-                </Link>
+                </button>
               </div>
             </SheetContent>
           </Sheet>
@@ -133,12 +260,6 @@ const Header: React.FC = () => {
             <Button className="w-full bg-gradient-friendly text-white" onClick={() => setComingSoon(null)}>Close</Button>
           </div>
         </div>
-      )}
-      {/* In the admin dashboard nav (visible only on /admin) */}
-      {location.pathname.startsWith('/admin') && (
-        <Link to="/admin-manual" className="ml-4 text-sm font-semibold text-gradient-friendly hover:underline">
-          Admin Manual
-        </Link>
       )}
     </header>
   );

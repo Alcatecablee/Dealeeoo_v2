@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import DealsSection from '@/components/admin/DealsSection';
 import PaymentProvidersSettings from '@/components/admin/PaymentProvidersSettings';
+import DisputesAdmin from './admin/Disputes';
 
 const ADMIN_PASSWORD = "Shacli1991";
 
@@ -42,6 +43,9 @@ const SECTIONS = [
 const Admin: React.FC = () => {
   const [password, setPassword] = useState('');
   const [authed, setAuthed] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+  const [sessionExpiry, setSessionExpiry] = useState<number | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -91,12 +95,95 @@ const Admin: React.FC = () => {
       )
     );
   };
+  const [adminTab, setAdminTab] = useState<'disputes' | 'analytics' | 'users'>('disputes');
 
   useEffect(() => {
-    if (localStorage.getItem('adminAuthed') === 'true') {
+    // Check for existing session
+    const session = sessionStorage.getItem('adminSession');
+    if (session) {
+      const { expiry } = JSON.parse(session);
+      if (expiry > Date.now()) {
       setAuthed(true);
+        setSessionExpiry(expiry);
+      } else {
+        sessionStorage.removeItem('adminSession');
+      }
+    }
+
+    // Check for lockout
+    const lockout = localStorage.getItem('adminLockout');
+    if (lockout) {
+      const lockoutTime = parseInt(lockout);
+      if (lockoutTime > Date.now()) {
+        setLockoutUntil(lockoutTime);
+      } else {
+        localStorage.removeItem('adminLockout');
+      }
     }
   }, []);
+
+  // Session expiry check
+  useEffect(() => {
+    if (sessionExpiry) {
+      const interval = setInterval(() => {
+        if (Date.now() >= sessionExpiry) {
+          setAuthed(false);
+          sessionStorage.removeItem('adminSession');
+          toast.error('Your session has expired. Please log in again.');
+        }
+      }, 60000); // Check every minute
+      return () => clearInterval(interval);
+    }
+  }, [sessionExpiry]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (lockoutUntil && Date.now() < lockoutUntil) {
+      const remainingTime = Math.ceil((lockoutUntil - Date.now()) / 60000);
+      toast.error(`Account is locked. Please try again in ${remainingTime} minutes.`);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+
+      if (response.ok) {
+        const expiry = Date.now() + (8 * 60 * 60 * 1000); // 8 hours
+        sessionStorage.setItem('adminSession', JSON.stringify({ expiry }));
+        setAuthed(true);
+        setSessionExpiry(expiry);
+        setLoginAttempts(0);
+        localStorage.removeItem('adminLockout');
+      } else {
+        const newAttempts = loginAttempts + 1;
+        setLoginAttempts(newAttempts);
+        
+        if (newAttempts >= 5) {
+          const lockoutTime = Date.now() + (15 * 60 * 1000); // 15 minutes
+          setLockoutUntil(lockoutTime);
+          localStorage.setItem('adminLockout', lockoutTime.toString());
+          toast.error(`Too many failed attempts. Account locked for 15 minutes.`);
+        } else {
+          toast.error(`Invalid password. ${5 - newAttempts} attempts remaining.`);
+        }
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('An error occurred during login. Please try again.');
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('adminSession');
+    setAuthed(false);
+    setSessionExpiry(null);
+    toast.success('Logged out successfully');
+  };
 
   useEffect(() => {
     if (authed) {
@@ -207,35 +294,29 @@ const Admin: React.FC = () => {
 
   if (!authed) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-full max-w-md mx-auto">
         <Header />
-        <div className="container mx-auto px-4 py-8">
-          <Card className="max-w-md mx-auto">
+          <Card className="mt-8">
             <CardHeader>
               <CardTitle>Admin Access</CardTitle>
             </CardHeader>
             <CardContent>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (password === ADMIN_PASSWORD) {
-                    setAuthed(true);
-                    localStorage.setItem('adminAuthed', 'true');
-                  } else {
-                    toast.error('Incorrect password');
-                  }
-                }}
-                className="space-y-4"
-              >
+              <form onSubmit={handleLogin} className="space-y-4">
                 <Input
                   type="password"
                   placeholder="Enter admin password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="border-friendly-blue/20 focus:border-friendly-blue focus:ring-friendly-blue/30"
+                  disabled={!!lockoutUntil}
                 />
-                <Button type="submit" className="w-full bg-gradient-friendly">
-                  Sign In
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-friendly"
+                  disabled={!!lockoutUntil}
+                >
+                  {lockoutUntil ? 'Account Locked' : 'Sign In'}
                 </Button>
               </form>
             </CardContent>
@@ -268,334 +349,24 @@ const Admin: React.FC = () => {
         </aside>
         {/* Main Content */}
         <main className="flex-1 p-8">
-          {section === 'deals' && <DealsSection />}
-          {section === 'users' && (
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold mb-4">User Directory</h2>
-              <div className="mb-4 flex flex-col md:flex-row gap-4 items-center">
-                <input
-                  type="text"
-                  placeholder="Search users by email..."
-                  className="border border-border rounded px-3 py-2 w-full md:w-64"
-                  value={userSearch}
-                  onChange={e => setUserSearch(e.target.value)}
-                />
-                <select
-                  className="border border-border rounded px-3 py-2 w-full md:w-48 text-foreground bg-background"
-                  value={userRole}
-                  onChange={e => setUserRole(e.target.value)}
-                >
-                  <option value="" className="text-foreground bg-background">All Roles</option>
-                  <option value="buyer" className="text-foreground bg-background">Buyer</option>
-                  <option value="seller" className="text-foreground bg-background">Seller</option>
-                  <option value="admin" className="text-foreground bg-background">Admin</option>
-                </select>
-                <select
-                  className="border border-border rounded px-3 py-2 w-full md:w-48 text-foreground bg-background"
-                  value={userStatus}
-                  onChange={e => setUserStatus(e.target.value)}
-                >
-                  <option value="" className="text-foreground bg-background">All Statuses</option>
-                  <option value="active" className="text-foreground bg-background">Active</option>
-                  <option value="banned" className="text-foreground bg-background">Banned</option>
-                  <option value="pending" className="text-foreground bg-background">Pending</option>
-                </select>
-                <button className="bg-gradient-friendly text-white px-4 py-2 rounded font-semibold shadow hover:opacity-90 transition" onClick={applyUserFilters}>Apply Filters</button>
+          <div className="container mx-auto px-4 py-8">
+            <div className="flex gap-4 mb-6">
+              <button onClick={() => setAdminTab('disputes')} className={`px-4 py-2 rounded-lg font-bold ${adminTab === 'disputes' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>Disputes</button>
+              <button onClick={() => setAdminTab('analytics')} className={`px-4 py-2 rounded-lg font-bold ${adminTab === 'analytics' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>Analytics</button>
+              <button onClick={() => setAdminTab('users')} className={`px-4 py-2 rounded-lg font-bold ${adminTab === 'users' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>User Management</button>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-4">Email</th>
-                      <th className="text-left py-2 px-4">Role</th>
-                      <th className="text-left py-2 px-4">Status</th>
-                      <th className="text-left py-2 px-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((u, i) => (
-                      <tr className="border-b border-border" key={u.email + i}>
-                        <td className="py-2 px-4">{u.email}</td>
-                        <td className="py-2 px-4">{u.role}</td>
-                        <td className="py-2 px-4">{u.status}</td>
-                        <td className="py-2 px-4">
-                          <button className="text-blue-500 hover:underline mr-2">View</button>
-                          <button className="text-yellow-500 hover:underline mr-2">Ban</button>
-                          <button className="text-red-500 hover:underline">Delete</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {adminTab === 'disputes' && <DisputesAdmin />}
+            {adminTab === 'analytics' && (
+              <div className="p-8 bg-white border rounded-lg shadow text-center text-lg text-muted-foreground">
+                <b>Analytics Dashboard</b> (Coming soon: deal volume, dispute rates, revenue, etc.)
               </div>
-              <div className="mt-4 text-muted-foreground text-sm">(User data will be loaded from the database in a future update.)</div>
-            </Card>
-          )}
-          {section === 'disputes' && (
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold mb-4">Dispute Resolution</h2>
-              <div className="mb-4 flex flex-col md:flex-row gap-4 items-center">
-                <input
-                  type="text"
-                  placeholder="Search disputes by deal, user, or reason..."
-                  className="border border-border rounded px-3 py-2 w-full md:w-96"
-                  value={disputeSearch}
-                  onChange={e => setDisputeSearch(e.target.value)}
-                />
-                <select
-                  className="border border-border rounded px-3 py-2 w-full md:w-48 text-foreground bg-background"
-                  value={disputeStatus}
-                  onChange={e => setDisputeStatus(e.target.value)}
-                >
-                  <option value="" className="text-foreground bg-background">All Statuses</option>
-                  <option value="open" className="text-foreground bg-background">Open</option>
-                  <option value="resolved" className="text-foreground bg-background">Resolved</option>
-                  <option value="escalated" className="text-foreground bg-background">Escalated</option>
-                </select>
-                <button className="bg-gradient-friendly text-white px-4 py-2 rounded font-semibold shadow hover:opacity-90 transition" onClick={applyDisputeFilters}>Apply Filters</button>
+            )}
+            {adminTab === 'users' && (
+              <div className="p-8 bg-white border rounded-lg shadow text-center text-lg text-muted-foreground">
+                <b>User Management</b> (Coming soon: user list, search, ban, etc.)
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-4">Deal</th>
-                      <th className="text-left py-2 px-4">Buyer</th>
-                      <th className="text-left py-2 px-4">Seller</th>
-                      <th className="text-left py-2 px-4">Status</th>
-                      <th className="text-left py-2 px-4">Reason</th>
-                      <th className="text-left py-2 px-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredDisputes.map((d, i) => (
-                      <tr className="border-b border-border" key={d.deal + i}>
-                        <td className="py-2 px-4">{d.deal}</td>
-                        <td className="py-2 px-4">{d.buyer}</td>
-                        <td className="py-2 px-4">{d.seller}</td>
-                        <td className="py-2 px-4">{d.status}</td>
-                        <td className="py-2 px-4">{d.reason}</td>
-                        <td className="py-2 px-4">
-                          <button className="text-blue-500 hover:underline mr-2">View</button>
-                          <button className="text-green-500 hover:underline mr-2">Resolve</button>
-                          <button className="text-yellow-500 hover:underline">Escalate</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            )}
               </div>
-              <div className="mt-4 text-muted-foreground text-sm">(Dispute data will be loaded from the database in a future update.)</div>
-            </Card>
-          )}
-          {section === 'analytics' && (
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold mb-4">Analytics & Reporting</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-card border border-border rounded-xl p-6 flex flex-col items-center">
-                  <span className="text-3xl font-bold text-gradient-friendly">$12,500</span>
-                  <span className="text-muted-foreground mt-2">Total Volume</span>
-                </div>
-                <div className="bg-card border border-border rounded-xl p-6 flex flex-col items-center">
-                  <span className="text-3xl font-bold text-gradient-friendly">42</span>
-                  <span className="text-muted-foreground mt-2">Active Deals</span>
-                </div>
-                <div className="bg-card border border-border rounded-xl p-6 flex flex-col items-center">
-                  <span className="text-3xl font-bold text-gradient-friendly">128</span>
-                  <span className="text-muted-foreground mt-2">Completed Deals</span>
-                </div>
-                <div className="bg-card border border-border rounded-xl p-6 flex flex-col items-center">
-                  <span className="text-3xl font-bold text-gradient-friendly">$1,250</span>
-                  <span className="text-muted-foreground mt-2">Revenue</span>
-                </div>
-              </div>
-              <div className="bg-card border border-border rounded-xl p-8 flex flex-col items-center justify-center min-h-[300px]">
-                <span className="text-lg text-muted-foreground mb-4">Deal Volume (Last 30 Days)</span>
-                <div className="w-full h-40 bg-gradient-to-r from-friendly-blue/10 to-friendly-purple/10 rounded-lg flex items-center justify-center">
-                  <span className="text-muted-foreground">[Chart Placeholder]</span>
-                </div>
-              </div>
-              <div className="mt-8 text-muted-foreground text-sm">(Analytics will be loaded from the database and visualized with charts in a future update.)</div>
-            </Card>
-          )}
-          {section === 'ai-settings' && (
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold mb-4">AI Settings</h2>
-              <p className="mb-4 text-muted-foreground">Configure API keys for AI providers. These are required for features like AI Deal Advisor, fraud detection, and more.</p>
-              <div className="space-y-8 max-w-md">
-                {/* OpenAI Key */}
-                <AIApiKeyInput provider="OpenAI" storageKey="openaiApiKey" />
-                {/* Anthropic Key */}
-                <AIApiKeyInput provider="Anthropic" storageKey="anthropicApiKey" />
-              </div>
-              <div className="mt-8 text-muted-foreground text-sm border-t pt-4">(More providers and advanced settings coming soon.)</div>
-            </Card>
-          )}
-          {section === 'ai-insights' && (
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold mb-4">AI Insights</h2>
-              <p className="mb-4 text-muted-foreground">View AI-generated analytics, fraud alerts, dispute suggestions, and more.</p>
-              <ul className="list-disc pl-6 space-y-2">
-                <li>Fraud/Anomaly Alerts</li>
-                <li>Dispute Resolution Suggestions</li>
-                <li>Support Ticket Summaries</li>
-                <li>User Risk Scores</li>
-                <li>Predictive Analytics</li>
-                <li>Smart Notifications</li>
-              </ul>
-              <div className="mt-6 text-muted-foreground text-sm">(Coming soon: live AI insights and dashboards.)</div>
-            </Card>
-          )}
-          {section === 'settings' && (
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold mb-4">Platform Settings</h2>
-              <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <label className="block font-semibold mb-2">Platform Fee (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    className="border border-border rounded px-3 py-2 w-full bg-background text-foreground"
-                    value={5}
-                    readOnly
-                  />
-                  <div className="text-muted-foreground text-xs mt-1">(Editable in future update. Current: 5%)</div>
-                </div>
-                <div>
-                  <label className="block font-semibold mb-2">Payout Schedule</label>
-                  <select className="border border-border rounded px-3 py-2 w-full bg-background text-foreground" value="weekly" disabled>
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                  <div className="text-muted-foreground text-xs mt-1">(Editable in future update. Current: Weekly)</div>
-                </div>
-              </div>
-              <div className="mb-8">
-                <label className="block font-semibold mb-2">Maintenance Mode</label>
-                <div className="flex items-center gap-4">
-                  <input type="checkbox" checked={false} disabled className="h-5 w-5 accent-primary" />
-                  <span className="text-muted-foreground">(Toggle coming soon. When enabled, new deals cannot be created.)</span>
-                </div>
-              </div>
-              <h3 className="text-lg font-semibold mb-2 mt-8">Payment Providers</h3>
-              <p className="mb-4 text-muted-foreground">Enter your API keys for each provider and activate the one you want to use. This makes it easy to switch between Stripe, Paystack, Flutterwave, etc. for scaling and global reach.</p>
-              <PaymentProvidersSettings />
-            </Card>
-          )}
-          {section === 'logs' && (
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold mb-4">Security & Compliance (Audit Logs)</h2>
-              <div className="mb-4 flex flex-col md:flex-row gap-4 items-center">
-                <input
-                  type="text"
-                  placeholder="Search logs by user or action..."
-                  className="border border-border rounded px-3 py-2 w-full md:w-96"
-                />
-                <select className="border border-border rounded px-3 py-2 w-full md:w-48 text-foreground bg-background">
-                  <option value="" className="text-foreground bg-background">All Actions</option>
-                  <option value="login" className="text-foreground bg-background">Login</option>
-                  <option value="update" className="text-foreground bg-background">Update</option>
-                  <option value="delete" className="text-foreground bg-background">Delete</option>
-                  <option value="ban" className="text-foreground bg-background">Ban</option>
-                </select>
-                <button className="bg-gradient-friendly text-white px-4 py-2 rounded font-semibold shadow hover:opacity-90 transition">Apply Filters</button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-4">Timestamp</th>
-                      <th className="text-left py-2 px-4">User</th>
-                      <th className="text-left py-2 px-4">Action</th>
-                      <th className="text-left py-2 px-4">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Placeholder audit log data */}
-                    <tr className="border-b border-border">
-                      <td className="py-2 px-4">2024-05-09 10:15:00</td>
-                      <td className="py-2 px-4">admin@example.com</td>
-                      <td className="py-2 px-4">Login</td>
-                      <td className="py-2 px-4">Admin logged in</td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-2 px-4">2024-05-09 10:17:22</td>
-                      <td className="py-2 px-4">alice@example.com</td>
-                      <td className="py-2 px-4">Update</td>
-                      <td className="py-2 px-4">Updated deal #1234 status to Paid</td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-2 px-4">2024-05-09 10:18:45</td>
-                      <td className="py-2 px-4">bob@example.com</td>
-                      <td className="py-2 px-4">Ban</td>
-                      <td className="py-2 px-4">User banned for suspicious activity</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 text-muted-foreground text-sm">(Audit log data will be loaded from the database in a future update.)</div>
-            </Card>
-          )}
-          {section === 'support' && (
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold mb-4">Messaging & Support</h2>
-              <div className="mb-4 flex flex-col md:flex-row gap-4 items-center">
-                <input
-                  type="text"
-                  placeholder="Search tickets by user or subject..."
-                  className="border border-border rounded px-3 py-2 w-full md:w-96"
-                />
-                <select className="border border-border rounded px-3 py-2 w-full md:w-48 text-foreground bg-background">
-                  <option value="" className="text-foreground bg-background">All Statuses</option>
-                  <option value="open" className="text-foreground bg-background">Open</option>
-                  <option value="pending" className="text-foreground bg-background">Pending</option>
-                  <option value="closed" className="text-foreground bg-background">Closed</option>
-                </select>
-                <button className="bg-gradient-friendly text-white px-4 py-2 rounded font-semibold shadow hover:opacity-90 transition">Apply Filters</button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-4">Ticket ID</th>
-                      <th className="text-left py-2 px-4">User</th>
-                      <th className="text-left py-2 px-4">Subject</th>
-                      <th className="text-left py-2 px-4">Status</th>
-                      <th className="text-left py-2 px-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Placeholder support ticket data */}
-                    <tr className="border-b border-border">
-                      <td className="py-2 px-4">#T1001</td>
-                      <td className="py-2 px-4">alice@example.com</td>
-                      <td className="py-2 px-4">Unable to mark deal as paid</td>
-                      <td className="py-2 px-4">Open</td>
-                      <td className="py-2 px-4">
-                        <button className="text-blue-500 hover:underline mr-2">View</button>
-                        <button className="text-green-500 hover:underline mr-2">Reply</button>
-                        <button className="text-red-500 hover:underline">Close</button>
-                      </td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <td className="py-2 px-4">#T1002</td>
-                      <td className="py-2 px-4">bob@example.com</td>
-                      <td className="py-2 px-4">Dispute not resolved</td>
-                      <td className="py-2 px-4">Pending</td>
-                      <td className="py-2 px-4">
-                        <button className="text-blue-500 hover:underline mr-2">View</button>
-                        <button className="text-green-500 hover:underline mr-2">Reply</button>
-                        <button className="text-red-500 hover:underline">Close</button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 text-muted-foreground text-sm">(Support ticket data will be loaded from the database in a future update.)</div>
-            </Card>
-          )}
         </main>
       </div>
 
