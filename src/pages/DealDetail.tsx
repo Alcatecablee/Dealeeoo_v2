@@ -99,8 +99,14 @@ interface DealRow {
   seller_token_expires_at: string | null;
 }
 
-const DealDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+interface DealDetailProps {
+  dealId?: string;
+}
+
+const DealDetail: React.FC<DealDetailProps> = ({ dealId }) => {
+  // Use dealId prop if provided, otherwise fallback to useParams
+  const params = useParams<{ id: string }>();
+  const id = dealId || params.id;
   const navigate = useNavigate();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);

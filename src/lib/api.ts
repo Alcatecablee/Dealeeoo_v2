@@ -4,10 +4,13 @@ import { toast } from 'sonner';
 
 class DealService {
   async createDeal(dealInput: CreateDealInput): Promise<Deal> {
-    // Set expiry to 7 days from now
-    const now = new Date();
-    const expiry = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days in ms
-    const expiryISO = expiry.toISOString();
+    // Set expiry to 7 days from now if not provided
+    let expiryISO = dealInput.expiry;
+    if (!expiryISO) {
+      const now = new Date();
+      const expiry = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days in ms
+      expiryISO = expiry.toISOString();
+    }
     const { data, error } = await supabase
       .from('deals')
       .insert({
@@ -21,6 +24,11 @@ class DealService {
         seller_access_token: dealInput.seller_access_token,
         buyer_token_expires_at: expiryISO,
         seller_token_expires_at: expiryISO,
+        notes: dealInput.notes || null,
+        expiry: expiryISO,
+        deal_type: dealInput.deal_type || null,
+        currency: dealInput.currency || null,
+        attachment_url: dealInput.attachment_url || null,
       })
       .select()
       .single();
@@ -38,7 +46,12 @@ class DealService {
       buyerEmail: data.buyer_email,
       sellerEmail: data.seller_email,
       status: data.status as DealStatus,
-      createdAt: data.created_at
+      createdAt: data.created_at,
+      notes: data.notes,
+      expiry: data.expiry,
+      deal_type: data.deal_type,
+      currency: data.currency,
+      attachment_url: data.attachment_url,
     };
   }
 

@@ -249,7 +249,7 @@ const DealsSection: React.FC = () => {
         </div>
       </CardContent>
       <Dialog open={viewDealModal} onOpenChange={setViewDealModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby="deal-dialog-description">
           <DialogHeader>
             <DialogTitle>Deal Details</DialogTitle>
           </DialogHeader>

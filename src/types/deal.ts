@@ -15,6 +15,11 @@ export interface Deal {
   seller_token_expires_at?: string | null;
   disputeReason?: string | null;
   resolutionNote?: string | null;
+  notes?: string | null;
+  expiry?: string | null;
+  deal_type?: string | null;
+  currency?: string | null;
+  attachment_url?: string | null;
 }
 
 export interface CreateDealInput {
@@ -25,4 +30,9 @@ export interface CreateDealInput {
   sellerEmail: string;
   buyer_access_token: string;
   seller_access_token: string;
+  notes?: string;
+  expiry?: string;
+  deal_type?: string;
+  currency?: string;
+  attachment_url?: string;
 }

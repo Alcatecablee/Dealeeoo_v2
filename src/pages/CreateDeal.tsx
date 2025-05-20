@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import AnimatedSection from '@/components/AnimatedSection';
+import EnhancedDealForm from '@/components/EnhancedDealForm';
 
 const formSchema = z.object({
   title: z.string().min(3, {
@@ -232,7 +233,7 @@ function getPricingPlan(amount: number) {
 
 const PricingPlanModal = ({ open, onClose, onSelect }: { open: boolean, onClose: () => void, onSelect: (planKey: string) => void }) => (
   <Dialog open={open} onOpenChange={onClose}>
-    <DialogContent className="max-w-3xl w-full bg-background rounded-2xl p-8">
+    <DialogContent className="max-w-3xl w-full bg-background rounded-2xl p-8" aria-describedby="create-deal-dialog-description">
       <DialogHeader>
         <DialogTitle className="text-2xl font-bold mb-2 text-center">Choose a Pricing Plan</DialogTitle>
         <p className="text-muted-foreground text-center mb-6">Pick the plan that fits your deal. You can also let us auto-assign based on your amount.</p>
@@ -339,7 +340,7 @@ const CreateDeal: React.FC = () => {
 
 
       try {
-        await fetch('http://localhost:3001/api/send-deal-email', {
+        await fetch('/api/send-deal-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -348,7 +349,6 @@ const CreateDeal: React.FC = () => {
             dealId: newDeal.id,
             buyerToken: buyerToken,
             sellerToken: sellerToken,
-            // dealLink: window.location.origin + '/deal/' + newDeal.id, // Keep for now, will be replaced by backend
           }),
         });
       } catch (emailErr) {
@@ -427,6 +427,18 @@ const CreateDeal: React.FC = () => {
   const autoPlan = getPricingPlan(amount);
   const plan = manualPlan ? PRICING_PLANS.find(p => p.key === manualPlan) || autoPlan : autoPlan;
   const fee = amount > 0 ? (amount * plan.percent) / 100 : 0;
+
+  // Handler for EnhancedDealForm success
+  const handleEnhancedDealSuccess = (dealData) => {
+    // You can add logic here to show the success modal, etc.
+    setShowReview(false);
+    setShowSuccessModal(true);
+    // Optionally set createdDealId if dealData contains it
+    if (dealData && dealData.id) setCreatedDealId(dealData.id);
+  };
+
+  // DEMO: EnhancedDealForm (remove after review)
+  // <Card className="my-8"><CardHeader><CardTitle>New Enhanced Deal Form Demo</CardTitle></CardHeader><CardContent><EnhancedDealForm /></CardContent></Card>
 
   return (
     <div className="min-h-screen bg-background text-white">
@@ -523,86 +535,13 @@ const CreateDeal: React.FC = () => {
           }}
         />
           
-        {/* Review Modal */}
+        {/* Review Modal - replaced with EnhancedDealForm */}
         <Dialog open={showReview} onOpenChange={setShowReview}>
-          <DialogContent className="max-w-lg w-full bg-background rounded-2xl p-6">
+          <DialogContent className="max-w-lg w-full bg-background rounded-2xl p-6" aria-describedby="create-deal-success-description">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold mb-2">Review & Start Deal</DialogTitle>
             </DialogHeader>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Deal Title</label>
-                <Input {...form.register('title')} className="bg-muted text-white" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <Textarea {...form.register('description')} className="bg-muted text-white min-h-[80px]" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-                  Amount
-                  <select
-                    value={currency}
-                    onChange={e => setCurrency(e.target.value)}
-                    className="ml-2 bg-muted text-white rounded px-2 py-1 text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    style={{ width: 'auto' }}
-                  >
-                    {CURRENCY_OPTIONS.map(opt => (
-                      <option key={opt.symbol} value={opt.symbol}>{opt.symbol}</option>
-                    ))}
-                  </select>
-                </label>
-                <div className="flex items-center">
-                  <span className="px-3 py-2 rounded-l bg-muted text-white border-r border-border select-none">{currency}</span>
-                  <Input type="number" step="0.01" min="0" {...form.register('amount')} className="bg-muted text-white rounded-l-none" style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }} />
-                </div>
-              </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Buyer Email</label>
-                  <Input type="email" {...form.register('buyerEmail')} className="bg-muted text-white" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Seller Email</label>
-                  <Input type="email" {...form.register('sellerEmail')} className="bg-muted text-white" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Notes (optional)</label>
-                <Textarea {...form.register('notes')} className="bg-muted text-white min-h-[60px]" />
-              </div>
-              {/* Pricing Plan Summary */}
-              <div className="bg-muted rounded-xl p-4 flex flex-col md:flex-row items-center gap-4 mt-2">
-                <div className="flex-1 flex items-center gap-3">
-                  <span className="text-2xl">{plan.emoji}</span>
-                  <span className="font-bold text-lg">{plan.name}</span>
-                  <span className="text-sm text-muted-foreground">({plan.percent}% fee)</span>
-                </div>
-                <div className="flex-1 text-right">
-                  <span className="font-semibold">Estimated Fee:</span> <span className="text-primary font-bold">${fee.toFixed(2)}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <a href="#pricing-info" className="text-xs underline text-muted-foreground ml-2" target="_blank" rel="noopener noreferrer">
-                  Learn more about pricing
-                </a>
-          </div>
-              <DialogFooter>
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded-full bg-muted text-white font-semibold hover:bg-muted/80 transition"
-                  onClick={() => setShowReview(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                      type="submit" 
-                  className="px-6 py-2 rounded-full bg-primary text-white font-bold hover:bg-primary/90 transition"
-                    >
-                  Submit Deal
-                </button>
-              </DialogFooter>
-                  </form>
+            <EnhancedDealForm onCancel={() => setShowReview(false)} onSuccess={handleEnhancedDealSuccess} />
           </DialogContent>
         </Dialog>
       </main>

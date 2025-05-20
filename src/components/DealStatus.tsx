@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 import Confetti from 'react-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface DealStatusProps {
   deal: Deal;
@@ -43,6 +44,14 @@ const DealStatus: React.FC<DealStatusProps> = ({ deal, onUpdate, userRole, userE
   const [expiryCountdown, setExpiryCountdown] = React.useState<string | null>(null);
   const [maskEmails, setMaskEmails] = React.useState(userRole === 'observer');
   const [participants, setParticipants] = useState<{ email: string; role: string }[]>([]);
+  const [showGatewayModal, setShowGatewayModal] = React.useState(false);
+  const [gatewayLoading, setGatewayLoading] = React.useState(false);
+  const [paymentGateways, setPaymentGateways] = React.useState([
+    { key: 'stripe', label: 'Stripe', enabled: false },
+    { key: 'wise', label: 'Wise', enabled: false },
+    { key: 'manual', label: 'Manual Payment', enabled: true },
+  ]);
+  const [gatewaysLoading, setGatewaysLoading] = React.useState(true);
 
   const handleUpdateStatus = async (newStatus: 'paid' | 'complete') => {
     try {
@@ -262,222 +271,144 @@ const DealStatus: React.FC<DealStatusProps> = ({ deal, onUpdate, userRole, userE
     })();
   }, [deal.id]);
 
+  React.useEffect(() => {
+    setGatewaysLoading(true);
+    fetch('/api/gateways')
+      .then(res => res.json())
+      .then(data => setPaymentGateways(data))
+      .catch(() => {})
+      .finally(() => setGatewaysLoading(false));
+  }, []);
+
+  async function handleGatewaySelect(gatewayKey: string) {
+    setGatewayLoading(true);
+    // Log the selection for analytics
+    await fetch('/api/log-gateway-choice', {
+      method: 'POST',
+      body: JSON.stringify({ dealId: deal.id, userEmail, gateway: gatewayKey }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const gateway = paymentGateways.find(gw => gw.key === gatewayKey);
+    setTimeout(() => { // Simulate network delay
+      setGatewayLoading(false);
+      setShowGatewayModal(false);
+      if (gateway?.enabled && gateway.key !== 'manual') {
+        // Redirect to real payment gateway (placeholder)
+        window.location.href = `/api/pay/${gateway.key}?dealId=${deal.id}`;
+      } else {
+        // Redirect to manual payment instructions
+        window.location.href = `/deal/${deal.id}/manual-payment?gateway=${gatewayKey}`;
+      }
+    }, 600);
+  }
+
   return (
-    <div className="space-y-6 font-sans">
-      {showConfetti && <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={200} />}
-      <Card className="w-full max-w-3xl mx-auto shadow-xl border border-primary/30 bg-background/80">
-        {/* Status Banner */}
-        {(deal.status === 'disputed' || deal.status === 'resolved') && (
-          <div
-            role="status"
-            aria-live="polite"
-            className={`rounded-t-lg px-6 py-4 text-white font-semibold text-center ${deal.status === 'disputed' ? 'bg-red-600' : 'bg-green-600'}`}
-          >
-            {deal.status === 'disputed' ? (
-              <>
-                <span className="inline-flex items-center gap-2"><AlertTriangle className="w-5 h-5 inline" /> This deal is currently <b>in dispute</b>.</span>
-                {deal.disputeReason && (
-                  <div className="mt-2 text-sm font-normal text-red-100">Reason: {deal.disputeReason}</div>
-                )}
-              </>
-            ) : (
-              <>
-                <span className="inline-flex items-center gap-2"><CheckCircle className="w-5 h-5 inline" /> This dispute has been <b>resolved</b>.</span>
-                {deal.resolutionNote && (
-                  <div className="mt-2 text-sm font-normal text-green-100">Resolution: {deal.resolutionNote}</div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img src="/d-logo.png" alt="Dealeeoo Logo" className="w-8 h-8" />
-              <CardTitle className="text-2xl flex items-center gap-2 font-brand">
-                {deal.title}
-                <span
-                  className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold border border-opacity-40 ${getStatusBadgeColor()} animate-pulse`}
-                  aria-label={`Deal status: ${deal.status}`}
-                >
-                  {deal.status.toUpperCase()}
-            </span>
-              </CardTitle>
-            </div>
-            <div className="flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => handleCopy(deal.id, 'Deal ID')} aria-label="Copy Deal ID" className="transition hover:scale-105 focus:ring-2 focus:ring-primary/50">
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{copiedEmail === 'Deal ID' ? 'Copied!' : 'Copy Deal ID'}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <span className="text-xs text-muted-foreground select-all">{deal.id.slice(0, 8)}...{deal.id.slice(-4)}</span>
-        </div>
-          </div>
-          {expiry && (
-            <div className="text-xs text-muted-foreground mt-2 flex flex-col gap-1" aria-label="Link expires">
-              <span>Link expires: {new Date(expiry).toLocaleString()}</span>
-              {expiryCountdown && <span className="text-warning-foreground font-semibold">{expiryCountdown}</span>}
-            </div>
-          )}
-          <div className="flex items-center gap-2 mt-2">
-            <AnimatePresence>
-              {showSecureBadge && (
-                <motion.span
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1.1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  transition={{ duration: 0.6 }}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-900/20 text-green-400 border border-green-400/30 shadow"
-                >
-                  <Lock className="w-3 h-3 mr-1" /> Secure by Dealeeoo
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-blue-950 to-gray-900 py-8 px-2 transition-colors duration-700">
+      <Card className="max-w-2xl mx-auto shadow-2xl rounded-2xl border-0 bg-gray-900/95 animate-fade-in relative overflow-hidden">
+        {/* Gradient border accent */}
+        <div className="absolute inset-0 rounded-2xl pointer-events-none border-4 border-transparent" style={{boxShadow: '0 0 0 4px transparent, 0 0 32px 0 #5B78FF55'}}></div>
+        <CardHeader className="flex flex-col items-center gap-2 border-b border-blue-900/40 pb-4 bg-gradient-to-r from-blue-900 via-purple-900 to-gray-900 animate-fade-in-down">
+          <img src="/d-logo.png" alt="Dealeeoo Logo" className="w-12 h-12 mb-2 drop-shadow-glow animate-float" />
+          <CardTitle className="text-3xl font-bold text-white text-center animate-fade-in-up">{deal.title}</CardTitle>
+          <Badge className={`mt-2 px-4 py-1 rounded-full text-base font-semibold status-badge status-${deal.status} ${getStatusBadgeColor()} animate-pulse-soft bg-gradient-to-r from-blue-600 via-purple-600 to-blue-400 text-white shadow-lg`}>{deal.status.toUpperCase()}</Badge>
+          <p className="text-muted-foreground text-center mt-2 text-lg text-gray-300 animate-fade-in-up delay-100">{deal.description}</p>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Description</h3>
-              <p className="text-lg text-foreground font-semibold mb-4">{deal.description}</p>
-              <div className="mb-4">
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Amount</h3>
-                <p className="text-3xl font-bold text-gradient-friendly">${deal.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-              </div>
-              <div className="mb-4 flex items-center gap-2">
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Fee</h3>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="text-lg font-semibold text-primary cursor-pointer underline" title={`3% platform fee. This covers payment processing, dispute resolution, and secure escrow.`}>{((deal.amount * 0.03)).toFixed(2)}</span>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" align="center">
-                      3% platform fee. This covers payment processing, dispute resolution, and secure escrow.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="mb-4">
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Created on</h3>
-                <p className="text-foreground">{new Date(deal.createdAt).toLocaleDateString()}</p>
-              </div>
+        <CardContent className="pt-6 pb-2 bg-gray-900">
+          <div className="flex flex-col md:flex-row justify-between gap-8 mb-6">
+            <div className="flex-1">
+              <div className="text-3xl font-extrabold text-blue-300 mb-1 animate-fade-in-up">${deal.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+              <div className="text-sm text-blue-400 mb-2">Fee: <span className="font-semibold text-blue-200">${(deal.amount * 0.03).toFixed(2)}</span></div>
+              <div className="mt-2 text-base text-blue-200"><span className="font-semibold">Buyer:</span> {maskEmails ? maskEmail(deal.buyerEmail) : deal.buyerEmail}</div>
+              <div className="text-base text-purple-200"><span className="font-semibold">Seller:</span> {maskEmails ? maskEmail(deal.sellerEmail) : deal.sellerEmail}</div>
+              {userRole === 'observer' && (
+                <Button size="sm" variant="outline" onClick={() => setMaskEmails(m => !m)} aria-label={maskEmails ? 'Show emails' : 'Hide emails'} className="mt-2 bg-gradient-to-r from-blue-800 to-purple-800 text-white border-none hover:from-blue-700 hover:to-purple-700 transition-all duration-300">
+                  {maskEmails ? 'Show Emails' : 'Hide Emails'}
+                </Button>
+              )}
+              <div className="mt-4 text-xs text-gray-500">Created: {new Date(deal.createdAt).toLocaleDateString()}</div>
             </div>
-            <div>
-              <div className="mb-6">
-                <div className="flex flex-col md:flex-row gap-2 items-center mb-2">
-                  <span className="text-xs text-muted-foreground">Buyer:</span>
-                  <span className="inline-flex items-center gap-1 px-3 py-2 rounded bg-muted/40 min-h-[40px] max-w-full md:max-w-xs break-all md:truncate">
-                    <UserIcon className="w-4 h-4 text-primary" />
-                    <a href={`mailto:${deal.buyerEmail}`} className="text-foreground underline flex-1">
-                      {maskEmails ? maskEmail(deal.buyerEmail) : deal.buyerEmail}
-                    </a>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => handleCopy(deal.buyerEmail, 'Buyer Email')} aria-label="Copy Buyer Email" className="transition hover:scale-105 focus:ring-2 focus:ring-primary/50">
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{copiedEmail === 'Buyer Email' ? 'Copied!' : 'Copy Email'}</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    {isBuyer && <span className="ml-1 text-xs text-primary">(You)</span>}
-                  </span>
-                </div>
-                <div className="flex flex-col md:flex-row gap-2 items-center">
-                  <span className="text-xs text-muted-foreground">Seller:</span>
-                  <span className="inline-flex items-center gap-1 px-3 py-2 rounded bg-muted/40 min-h-[40px] max-w-full md:max-w-xs break-all md:truncate">
-                    <UserIcon className="w-4 h-4 text-primary" />
-                    <a href={`mailto:${deal.sellerEmail}`} className="text-foreground underline flex-1">
-                      {maskEmails ? maskEmail(deal.sellerEmail) : deal.sellerEmail}
-                    </a>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => handleCopy(deal.sellerEmail, 'Seller Email')} aria-label="Copy Seller Email" className="transition hover:scale-105 focus:ring-2 focus:ring-primary/50">
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{copiedEmail === 'Seller Email' ? 'Copied!' : 'Copy Email'}</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    {isSeller && <span className="ml-1 text-xs text-primary">(You)</span>}
-                  </span>
-                </div>
-                {userRole === 'observer' && (
-                  <Button size="sm" variant="outline" onClick={() => setMaskEmails(m => !m)} aria-label={maskEmails ? 'Show emails' : 'Hide emails'} className="mt-2">
-                    {maskEmails ? 'Show Emails' : 'Hide Emails'}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-          {/* Progress Bar and Status */}
-          <Separator className="my-6" />
-          <div aria-label="Deal Progress" role="progressbar" className="mb-6">
-            <h3 className="font-medium mb-3">Deal Progress</h3>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${deal.status !== 'pending' ? 'bg-green-600' : 'bg-gray-200'}`}
-                    aria-label="Created step"
-                  >
-                    <CheckCircle className="text-white" size={16} />
+            <div className="flex-1 flex flex-col items-center justify-center">
+              {/* Modern Progress Bar with gradient and animation */}
+              <div className="w-full max-w-xs animate-fade-in-up">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${deal.status !== 'pending' ? 'bg-gradient-to-br from-green-400 via-green-600 to-green-800 shadow-lg animate-pulse-soft' : 'bg-gray-800'}`}> <CheckCircle className="text-white" size={20} /> </div>
+                    <span className="text-xs mt-1 text-gray-300">Created</span>
                   </div>
-                  <span className="text-xs mt-1 block">Created</span>
-                </div>
-                <div className="text-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${deal.status === 'paid' || deal.status === 'complete' || deal.status === 'resolved' ? 'bg-blue-600' : 'bg-gray-200'}`}
-                    aria-label="Paid step"
-                  >
-                    <DollarSign className="text-white" size={16} />
+                  <div className="flex-1 h-1 mx-1 bg-gray-800 relative overflow-hidden rounded-full">
+                    <div className={`absolute h-1 top-0 left-0 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-400 transition-all duration-700 ${deal.status === 'pending' ? 'w-0' : deal.status === 'paid' ? 'w-1/2' : (deal.status === 'complete' || deal.status === 'resolved') ? 'w-full' : 'w-0'}`}></div>
                   </div>
-                  <span className="text-xs mt-1 block">Paid</span>
-                </div>
-                <div className="text-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${(deal.status === 'complete' || deal.status === 'resolved') ? 'bg-green-600' : 'bg-gray-200'}`}
-                    aria-label="Complete step"
-                  >
-                    <CheckCircle className="text-white" size={16} />
+                  <div className="flex flex-col items-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${deal.status === 'paid' || deal.status === 'complete' || deal.status === 'resolved' ? 'bg-gradient-to-br from-blue-400 via-blue-600 to-purple-700 shadow-lg animate-pulse-soft' : 'bg-gray-800'}`}> <DollarSign className="text-white" size={20} /> </div>
+                    <span className="text-xs mt-1 text-gray-300">Paid</span>
                   </div>
-                  <span className="text-xs mt-1 block">Complete</span>
+                  <div className="flex-1 h-1 mx-1 bg-gray-800 relative overflow-hidden rounded-full">
+                    <div className={`absolute h-1 top-0 left-0 bg-gradient-to-r from-purple-500 to-green-400 transition-all duration-700 ${(deal.status === 'complete' || deal.status === 'resolved') ? 'w-full' : 'w-0'}`}></div>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${(deal.status === 'complete' || deal.status === 'resolved') ? 'bg-gradient-to-br from-green-400 via-green-600 to-green-800 shadow-lg animate-pulse-soft' : 'bg-gray-800'}`}> <CheckCircle className="text-white" size={20} /> </div>
+                    <span className="text-xs mt-1 text-gray-300">Complete</span>
+                  </div>
                 </div>
-              </div>
-              <div className="absolute top-4 left-8 right-8 h-1 bg-gray-200">
-                <div 
-                  className={`h-full ${deal.status === 'pending' ? 'bg-gray-200' : deal.status === 'paid' ? 'bg-blue-600' : (deal.status === 'complete' || deal.status === 'resolved') ? 'bg-green-600' : 'bg-gray-200'}`}
-                  style={{ 
-                    width: deal.status === 'pending' ? '0%' : deal.status === 'paid' ? '50%' : (deal.status === 'complete' || deal.status === 'resolved') ? '100%' : '0%'
-                  }}
-                  aria-hidden="true"
-                ></div>
               </div>
             </div>
           </div>
           {/* Status Message */}
-          <div className="bg-muted/50 p-4 rounded-lg mt-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-muted-foreground mt-0.5" />
-              <p className="text-sm text-muted-foreground">{getStatusMessage()}</p>
-            </div>
+          <div className="bg-gradient-to-r from-blue-900/60 via-purple-900/60 to-blue-900/60 border border-blue-800 p-4 rounded-lg mt-6 flex items-start gap-3 animate-fade-in-up">
+            <AlertCircle className="w-5 h-5 text-blue-300 mt-0.5 animate-fade-in" />
+            <p className="text-base text-blue-100 animate-fade-in-up delay-100">{getStatusMessage()}</p>
           </div>
+          {/* Mark as Paid button for buyer */}
+          {isBuyer && deal.status === 'pending' && (
+            <>
+              <Button
+                className="mt-6 w-full text-lg font-semibold py-3 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-400 text-white shadow-lg hover:from-blue-500 hover:to-purple-500 transition-all duration-300 animate-fade-in-up"
+                variant="default"
+                onClick={() => setShowGatewayModal(true)}
+                aria-label="Mark as Paid"
+              >
+                <DollarSign className="w-5 h-5 mr-2" />
+                Mark as Paid
+              </Button>
+              <Dialog open={showGatewayModal} onOpenChange={setShowGatewayModal}>
+                <DialogContent className="max-w-md w-full bg-gray-900 border border-blue-900/40">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl text-white mb-2">Choose a Payment Method</DialogTitle>
+                  </DialogHeader>
+                  {gatewaysLoading ? (
+                    <div className="flex justify-center items-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-400" /></div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4 mt-2">
+                      {paymentGateways.map(gw => (
+                        <Button
+                          key={gw.key}
+                          onClick={() => handleGatewaySelect(gw.key)}
+                          disabled={gatewayLoading}
+                          className={`w-full py-4 text-lg font-semibold flex items-center justify-center gap-2 ${gw.enabled ? 'bg-gradient-to-r from-blue-700 to-purple-700 text-white' : 'bg-gray-800 text-gray-400'} transition-all duration-300`}
+                        >
+                          {gw.label} {gw.enabled ? '' : '(Coming Soon)'}
+                          {gatewayLoading && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-400 mt-4 text-center">Manual payment is always available. More gateways coming soon!</div>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
           {/* Add dispute button for both buyer and seller */}
           {deal.status !== 'disputed' && (
-            <div className="mt-8">
+            <div className="mt-6">
               <AlertDialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="destructive"
-                    className="w-full transition hover:scale-105 focus:ring-2 focus:ring-primary/50"
+                    className="w-full text-lg font-semibold py-3 bg-gradient-to-r from-red-700 via-red-500 to-yellow-500 text-white shadow-lg hover:from-red-600 hover:to-yellow-400 transition-all duration-300 animate-fade-in-up"
                     disabled={isLoading}
                     aria-label="File Dispute"
                   >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <AlertTriangle className="w-4 h-4 mr-2" />}
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <AlertTriangle className="w-5 h-5 mr-2" />}
                     File Dispute
                   </Button>
                 </AlertDialogTrigger>
@@ -511,42 +442,27 @@ const DealStatus: React.FC<DealStatusProps> = ({ deal, onUpdate, userRole, userE
               </AlertDialog>
             </div>
           )}
-          <div className="mb-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">Participants</h3>
-            <ul className="list-disc pl-5">
-              {participants.map((p, i) => (
-                <li key={i} className="text-foreground text-sm">
-                  <span className="font-semibold capitalize">{p.role}:</span> {p.email}
-                </li>
-              ))}
-            </ul>
-        </div>
-      </CardContent>
-        <CardFooter className="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0 md:space-x-4 mt-4 border-t border-border pt-4">
-          <Button variant="ghost" onClick={() => window.location.href = '/'} aria-label="Back to Dashboard" className="transition hover:scale-105 focus:ring-2 focus:ring-primary/50 w-full md:w-auto">Back to Dashboard</Button>
-          <Button variant="outline" onClick={handleDownloadReceipt} disabled={isLoading} aria-label="Download Receipt" className="transition hover:scale-105 focus:ring-2 focus:ring-primary/50 w-full md:w-auto">
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Download Receipt'}
-          </Button>
-          <Button variant="outline" onClick={handleSendReceipt} disabled={isLoading} aria-label="Send Receipt via Email" className="transition hover:scale-105 focus:ring-2 focus:ring-primary/50 w-full md:w-auto">
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send Receipt via Email'}
-          </Button>
+          <div className="flex flex-col md:flex-row gap-2 mt-6">
+            <Button variant="outline" onClick={handleDownloadReceipt} disabled={isLoading} aria-label="Download Receipt" className="transition hover:scale-105 focus:ring-2 focus:ring-primary/50 w-full md:w-auto bg-gradient-to-r from-blue-900 to-blue-700 text-blue-100 border-none animate-fade-in-up">
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Download Receipt'}
+            </Button>
+            <Button variant="outline" onClick={handleSendReceipt} disabled={isLoading} aria-label="Send Receipt via Email" className="transition hover:scale-105 focus:ring-2 focus:ring-primary/50 w-full md:w-auto bg-gradient-to-r from-purple-900 to-blue-700 text-blue-100 border-none animate-fade-in-up">
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send Receipt via Email'}
+            </Button>
+            <Button variant="ghost" onClick={() => window.location.href = '/'} aria-label="Back to Dashboard" className="transition hover:scale-105 focus:ring-2 focus:ring-primary/50 w-full md:w-auto text-blue-200 animate-fade-in-up">Back to Dashboard</Button>
+          </div>
+        </CardContent>
+        <CardFooter className="pt-0 pb-6 px-6 bg-gradient-to-r from-gray-900 via-blue-950 to-gray-900 animate-fade-in-up">
+          <Tabs>
+            <Tab label="Chat">
+              <DealChat dealId={deal.id} userEmail={userEmail} />
+            </Tab>
+            <Tab label="History">
+              <DealAuditTrail dealId={deal.id} currentStatus={deal.status} buyerEmail={deal.buyerEmail} sellerEmail={deal.sellerEmail} />
+            </Tab>
+          </Tabs>
         </CardFooter>
       </Card>
-      <div className="max-w-3xl mx-auto w-full space-y-6">
-        <DealAuditTrail
-          dealId={deal.id}
-          currentStatus={deal.status}
-          buyerEmail={deal.buyerEmail}
-          sellerEmail={deal.sellerEmail}
-        />
-        <DealChat
-          dealId={deal.id}
-          userEmail={userEmail}
-          userRole={userRole}
-          buyerEmail={deal.buyerEmail}
-          sellerEmail={deal.sellerEmail}
-        />
-      </div>
     </div>
   );
 };
@@ -555,5 +471,30 @@ const DealStatus: React.FC<DealStatusProps> = ({ deal, onUpdate, userRole, userE
 const UserIcon = (props: any) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" {...props}><circle cx="12" cy="7" r="4" /><path d="M5.5 21a8.38 8.38 0 0 1 13 0" /></svg>
   );
+
+// Add simple Tabs/Tab implementation if not present
+const Tabs = ({ children }: { children: React.ReactNode }) => {
+  const [active, setActive] = React.useState(0);
+  const tabs = React.Children.toArray(children) as React.ReactElement[];
+  return (
+    <div>
+      <div className="flex border-b mb-2">
+        {tabs.map((tab, i) => (
+          <button
+            key={i}
+            className={`px-4 py-2 font-semibold focus:outline-none transition border-b-2 ${active === i ? 'border-blue-600 text-blue-700 bg-blue-50' : 'border-transparent text-gray-500 bg-transparent'}`}
+            onClick={() => setActive(i)}
+            type="button"
+          >
+            {tab.props.label}
+          </button>
+        ))}
+      </div>
+      <div className="pt-2">{tabs[active]}</div>
+    </div>
+  );
+};
+
+const Tab = ({ children }: { children: React.ReactNode; label?: string }) => <div>{children}</div>;
 
 export default DealStatus;

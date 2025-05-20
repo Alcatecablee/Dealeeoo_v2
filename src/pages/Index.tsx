@@ -81,12 +81,7 @@ const NOTIF_TYPES = [
 
 const Index = () => {
   const [scrolled, setScrolled] = useState(false);
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') || 'light';
-    }
-    return 'light';
-  });
+  const [theme, setTheme] = useState('dark');
   const [tab, setTab] = useState('before');
   const userEmail = localStorage.getItem('userEmail');
 
@@ -105,9 +100,9 @@ const Index = () => {
   }, [scrolled]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    document.documentElement.classList.add('dark');
+    localStorage.setItem('theme', 'dark');
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-blue-50/50 dark:from-gray-900 dark:to-gray-950 transition-colors duration-500">
