@@ -11,25 +11,39 @@ class DealService {
       const expiry = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days in ms
       expiryISO = expiry.toISOString();
     }
+    
+    // Create the deal data object
+    const dealData: any = {
+      title: dealInput.title,
+      description: dealInput.description,
+      amount: dealInput.amount,
+      buyer_email: dealInput.buyerEmail,
+      seller_email: dealInput.sellerEmail,
+      status: 'pending',
+      buyer_access_token: dealInput.buyer_access_token,
+      seller_access_token: dealInput.seller_access_token,
+      buyer_token_expires_at: expiryISO,
+      seller_token_expires_at: expiryISO,
+      notes: dealInput.notes || null,
+      expiry: expiryISO,
+      deal_type: dealInput.deal_type || null,
+      currency: dealInput.currency || null,
+      attachment_url: dealInput.attachment_url || null,
+    };
+    
+    // Add creator_user_id if provided
+    if (dealInput.creator_user_id) {
+      dealData.creator_user_id = dealInput.creator_user_id;
+    }
+    
+    // Add guest_id if provided
+    if (dealInput.guest_id) {
+      dealData.guest_id = dealInput.guest_id;
+    }
+    
     const { data, error } = await supabase
       .from('deals')
-      .insert({
-        title: dealInput.title,
-        description: dealInput.description,
-        amount: dealInput.amount,
-        buyer_email: dealInput.buyerEmail,
-        seller_email: dealInput.sellerEmail,
-        status: 'pending',
-        buyer_access_token: dealInput.buyer_access_token,
-        seller_access_token: dealInput.seller_access_token,
-        buyer_token_expires_at: expiryISO,
-        seller_token_expires_at: expiryISO,
-        notes: dealInput.notes || null,
-        expiry: expiryISO,
-        deal_type: dealInput.deal_type || null,
-        currency: dealInput.currency || null,
-        attachment_url: dealInput.attachment_url || null,
-      })
+      .insert(dealData)
       .select()
       .single();
       

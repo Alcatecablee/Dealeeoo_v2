@@ -10,6 +10,9 @@ import { Alert } from '@/components/ui/alert';
 import { fadeInUp, scaleIn } from '@/lib/animation-utils';
 import dealService from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { useGuestId } from '@/hooks/use-guest-id';
+import AuthModal from './auth/AuthModal';
 
 interface DealFormData {
   title: string;
@@ -27,6 +30,9 @@ const DealForm: React.FC = () => {
     { email: '', role: 'buyer' },
     { email: '', role: 'seller' },
   ]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const guestId = useGuestId();
 
   const handleParticipantChange = (index: number, field: 'email' | 'role', value: string) => {
     setParticipants(prev => prev.map((p, i) => i === index ? { ...p, [field]: value } : p));
@@ -44,7 +50,7 @@ const DealForm: React.FC = () => {
     try {
       setError(null);
       // Create the deal
-      const deal = await dealService.createDeal({
+      const dealData = {
         title: data.title,
         description: data.description,
         amount: Number(data.amount),
@@ -52,14 +58,37 @@ const DealForm: React.FC = () => {
         sellerEmail: data.sellerEmail,
         buyer_access_token: crypto.randomUUID(),
         seller_access_token: crypto.randomUUID(),
-      });
+      };
+
+      // Add creator_user_id if user is authenticated
+      if (isAuthenticated && user) {
+        dealData['creator_user_id'] = user.id;
+      } 
+      // Otherwise, add guest_id if available
+      else if (guestId) {
+        dealData['guest_id'] = guestId;
+      }
+
+      const deal = await dealService.createDeal(dealData);
+      
       // Add participants
       await Promise.all(participants.map(p => dealService.addParticipant(deal.id, p.email, p.role)));
-      navigate(`/deal/${deal.id}`);
+      
+      // After successful deal creation, show the signup modal if not authenticated
+      if (!isAuthenticated) {
+        setShowAuthModal(true);
+      } else {
+        navigate(`/deal/${deal.id}`);
+      }
     } catch (error) {
       console.error('Error creating deal:', error);
       setError('Failed to create deal. Please try again.');
     }
+  };
+
+  const handleAuthSuccess = () => {
+    // Navigate to the dashboard after successful authentication
+    navigate('/dashboard');
   };
 
   return (
@@ -239,8 +268,17 @@ const DealForm: React.FC = () => {
         </Button>
       </form>
     </Card>
+    
+    {/* Post-deal creation auth modal */}
+    {showAuthModal && (
+      <AuthModal 
+        defaultMode="signup" 
+        onAuthSuccess={handleAuthSuccess} 
+        triggerElement={<div style={{ display: 'none' }}></div>}
+      />
+    )}
     </motion.div>
   );
 };
 
-export default DealForm; 
+export default DealForm;
