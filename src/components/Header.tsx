@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, Users, DollarSign, Globe, Menu, Sparkles, Heart, Bell } from 'lucide-react';
+import { Shield, Users, DollarSign, Globe, Menu, Sparkles, Heart, Bell, User, ChevronDown, LogOut, Settings } from 'lucide-react';
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import AuthModal from './auth/AuthModal';
 
 const scrollToSection = (id: string) => {
   const el = document.getElementById(id);
@@ -20,7 +23,10 @@ const Header: React.FC = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const userEmail = localStorage.getItem('userEmail'); // Or get from auth context if available
+  
+  // Use the auth context to get user information
+  const { user, isAuthenticated, signOut } = useAuth();
+  const userEmail = user?.email || localStorage.getItem('userEmail');
 
   // Header hide/show on scroll
   const [showHeader, setShowHeader] = useState(true);
@@ -125,71 +131,115 @@ const Header: React.FC = () => {
             <Users className="h-4 w-4" />
             <span>Contact</span>
           </button>
+          {isAuthenticated && (
+            <Link to="/dashboard" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 focus:outline-none">
+              <User className="h-4 w-4" />
+              <span>My Dashboard</span>
+            </Link>
+          )}
         </nav>
         {/* Create Deal Button - right aligned, pops out */}
         <div className="hidden md:flex items-center flex-shrink-0 ml-4">
-          {/* Notification Bell */}
-          <div className="relative mr-4">
-            <button
-              className="relative focus:outline-none"
-              onClick={() => {
-                setShowDropdown((v) => !v);
-                if (unreadCount > 0) markAllAsRead();
-              }}
-              aria-label="Notifications"
-            >
-              <Bell className="h-6 w-6 text-primary" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{unreadCount}</span>
-              )}
-            </button>
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 w-80 bg-white border border-border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-                <div className="p-4 border-b border-border font-semibold">Notifications</div>
-                {notifications.length === 0 ? (
-                  <div className="p-4 text-muted-foreground text-sm">No notifications</div>
-                ) : (
-                  notifications.slice(0, 10).map((n) => (
-                    n.link ? (
-                      <button
-                        key={n.id}
-                        className={`w-full text-left p-3 border-b border-border text-sm hover:bg-blue-100 transition ${!n.read ? 'bg-blue-50' : ''}`}
-                        onClick={() => { setShowDropdown(false); navigate(n.link); }}
-                      >
-                        <div className="font-medium">{n.type.replace(/_/g, ' ')}</div>
-                        <div>{n.message}</div>
-                        <div className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</div>
-                      </button>
-                    ) : (
-                      <div key={n.id} className={`p-3 border-b border-border text-sm ${!n.read ? 'bg-blue-50' : ''}`}>
-                        <div className="font-medium">{n.type.replace(/_/g, ' ')}</div>
-                        <div>{n.message}</div>
-                        <div className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</div>
-                      </div>
-                    )
-                  ))
+          {/* Notification Bell - only show for authenticated users */}
+          {isAuthenticated && (
+            <div className="relative mr-4">
+              <button
+                className="relative focus:outline-none"
+                onClick={() => {
+                  setShowDropdown((v) => !v);
+                  if (unreadCount > 0) markAllAsRead();
+                }}
+                aria-label="Notifications"
+              >
+                <Bell className="h-6 w-6 text-primary" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{unreadCount}</span>
                 )}
-                <div className="p-2 text-center">
-                  <button className="text-primary text-xs underline" onClick={() => setShowDropdown(false)}>Close</button>
+              </button>
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-80 bg-white border border-border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                  <div className="p-4 border-b border-border font-semibold">Notifications</div>
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-muted-foreground text-sm">No notifications</div>
+                  ) : (
+                    notifications.slice(0, 10).map((n) => (
+                      n.link ? (
+                        <button
+                          key={n.id}
+                          className={`w-full text-left p-3 border-b border-border text-sm hover:bg-blue-100 transition ${!n.read ? 'bg-blue-50' : ''}`}
+                          onClick={() => { setShowDropdown(false); navigate(n.link); }}
+                        >
+                          <div className="font-medium">{n.type.replace(/_/g, ' ')}</div>
+                          <div>{n.message}</div>
+                          <div className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                        </button>
+                      ) : (
+                        <div key={n.id} className={`p-3 border-b border-border text-sm ${!n.read ? 'bg-blue-50' : ''}`}>
+                          <div className="font-medium">{n.type.replace(/_/g, ' ')}</div>
+                          <div>{n.message}</div>
+                          <div className="text-xs text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                        </div>
+                      )
+                    ))
+                  )}
+                  <div className="p-2 text-center">
+                    <button className="text-primary text-xs underline" onClick={() => setShowDropdown(false)}>Close</button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-          {/* Existing Create Deal Button */}
-            <Button 
-              className="bg-gradient-to-r from-friendly-blue via-friendly-purple to-friendly-green text-white font-bold shadow-lg hover:scale-105 hover:shadow-xl transition-all duration-300 flex items-center gap-2 px-6 py-2 border-0 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-friendly-blue"
-              style={{ boxShadow: '0 4px 24px 0 rgba(80, 72, 229, 0.15)' }}
-            onClick={() => {
-              if (location.pathname === '/create-deal') {
-                window.location.reload();
-              } else {
-                navigate('/create-deal');
-              }
-            }}
-            >
-              <DollarSign className="h-4 w-4" />
-              Create Deal
-            </Button>
+              )}
+            </div>
+          )}
+          
+          {/* User Menu for authenticated users */}
+          {isAuthenticated && user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 px-3 focus:ring-2 focus:ring-offset-2 focus:ring-friendly-blue">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-friendly-blue/20 flex items-center justify-center text-friendly-blue font-medium">
+                      {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-medium text-sm hidden sm:inline-block">
+                      {user.full_name || user.email.split('@')[0]}
+                    </span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => navigate('/dashboard')} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Dashboard</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Profile Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer text-red-600 hover:text-red-700 focus:text-red-700">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <AuthModal />
+          )}
+          
+          {/* Create Deal Button */}
+          <Button 
+            className="ml-4 bg-gradient-to-r from-friendly-blue via-friendly-purple to-friendly-green text-white font-bold shadow-lg hover:scale-105 hover:shadow-xl transition-all duration-300 flex items-center gap-2 px-6 py-2 border-0 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-friendly-blue"
+            style={{ boxShadow: '0 4px 24px 0 rgba(80, 72, 229, 0.15)' }}
+          onClick={() => {
+            if (location.pathname === '/create-deal') {
+              window.location.reload();
+            } else {
+              navigate('/create-deal');
+            }
+          }}
+          >
+            <DollarSign className="h-4 w-4" />
+            Create Deal
+          </Button>
         </div>
         {/* Mobile menu */}
         <div className="md:hidden">
@@ -217,7 +267,23 @@ const Header: React.FC = () => {
                   <Users className="h-5 w-5" />
                   Contact
                 </button>
+                
+                {isAuthenticated && (
+                  <button onClick={() => navigate('/dashboard')} className="text-lg font-medium text-muted-foreground flex items-center gap-2 hover:text-primary transition-colors focus:outline-none">
+                    <User className="h-5 w-5" />
+                    My Dashboard
+                  </button>
+                )}
+                
+                {isAuthenticated && (
+                  <button onClick={() => navigate('/profile')} className="text-lg font-medium text-muted-foreground flex items-center gap-2 hover:text-primary transition-colors focus:outline-none">
+                    <Settings className="h-5 w-5" />
+                    Profile Settings
+                  </button>
+                )}
+                
                 <div className="h-px bg-border my-2"></div>
+                
                 <button
                   className="text-lg font-medium text-primary flex items-center gap-2 hover:text-opacity-80 transition-colors"
                   onClick={() => {
@@ -231,6 +297,33 @@ const Header: React.FC = () => {
                   <DollarSign className="h-5 w-5" />
                   Create Deal
                 </button>
+                
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => signOut()}
+                    className="text-lg font-medium text-red-500 flex items-center gap-2 hover:text-red-600 transition-colors"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    Sign Out
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      // Close sheet first then open auth modal
+                      document.body.click(); // This will close the sheet in most cases
+                      setTimeout(() => {
+                        const authTriggerEl = document.querySelector('[data-auth-trigger]');
+                        if (authTriggerEl) {
+                          (authTriggerEl as HTMLElement).click();
+                        }
+                      }, 300);
+                    }}
+                    className="text-lg font-medium text-friendly-blue flex items-center gap-2 hover:text-friendly-purple transition-colors"
+                  >
+                    <User className="h-5 w-5" />
+                    Sign In / Sign Up
+                  </button>
+                )}
               </div>
             </SheetContent>
           </Sheet>

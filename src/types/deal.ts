@@ -35,4 +35,6 @@ export interface CreateDealInput {
   deal_type?: string;
   currency?: string;
   attachment_url?: string;
+  creator_user_id?: string;
+  guest_id?: string;
 }
