@@ -622,49 +622,77 @@ const Index = () => {
 
       {/* Payments Powered By Banner */}
       <section className="container mx-auto px-4 max-w-7xl flex flex-col items-center justify-center py-12 mb-12">
-        <div className="bg-white/80 dark:bg-gray-900/80 rounded-2xl p-10 shadow-xl flex flex-col items-center backdrop-blur-lg border border-white/20 dark:border-blue-900/30 w-full relative overflow-hidden">
-          <h3 className="text-center text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-8 tracking-wide drop-shadow-glow relative z-10">Payments powered by</h3>
+        <div className="bg-white/90 dark:bg-gray-900/90 rounded-3xl p-10 shadow-2xl flex flex-col items-center backdrop-blur-lg border border-white/20 dark:border-blue-900/30 w-full relative overflow-hidden transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(76,154,255,0.15)]">
+          {/* Background decorative elements */}
+          <div className="absolute -top-10 -left-10 w-40 h-40 bg-gradient-to-br from-friendly-blue/10 to-friendly-purple/10 rounded-full blur-3xl opacity-70"></div>
+          <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-gradient-to-tl from-friendly-purple/10 to-friendly-blue/10 rounded-full blur-3xl opacity-70"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-friendly-blue/2 via-friendly-purple/2 to-friendly-blue/2 opacity-30"></div>
+          
+          <h3 className="text-center text-xl md:text-2xl font-bold bg-gradient-to-r from-friendly-blue to-friendly-purple bg-clip-text text-transparent mb-2 tracking-wide drop-shadow-glow relative z-10">Payments powered by</h3>
+          <p className="text-center text-muted-foreground text-sm md:text-base mb-8 max-w-md">Secure transactions through trusted global payment partners</p>
+          
           <div className="relative w-full">
-            {/* Gradient edge masks - subtle, transparent to bg */}
-            <div className="pointer-events-none absolute left-0 top-0 h-full w-6 z-10" style={{background: 'linear-gradient(to right, rgba(255,255,255,0.12) 60%, transparent 100%)'}}></div>
-            <div className="pointer-events-none absolute right-0 top-0 h-full w-6 z-10" style={{background: 'linear-gradient(to left, rgba(255,255,255,0.12) 60%, transparent 100%)'}}></div>
-            {/* Marquee */}
-            <div className="overflow-hidden w-full pl-12 pr-12">
-              <div className="flex items-center gap-16 min-w-[200%] animate-marquee group hover:[animation-play-state:paused]" style={{animationDuration: '32s', minHeight: '64px'}}>
-                {/* LOGOS - only show the 5 you want, no grayscale */}
+            {/* Gradient edge masks - enhanced with better color blending */}
+            <div className="pointer-events-none absolute left-0 top-0 h-full w-12 z-10" 
+                 style={{background: 'linear-gradient(to right, var(--tw-bg-opacity) ? rgba(255,255,255,0.9) : rgba(17,24,39,0.9), transparent)'}}></div>
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-12 z-10" 
+                 style={{background: 'linear-gradient(to left, var(--tw-bg-opacity) ? rgba(255,255,255,0.9) : rgba(17,24,39,0.9), transparent)'}}></div>
+            
+            {/* Logo carousel with enhanced animations */}
+            <div className="overflow-hidden w-full px-12">
+              <div className="flex items-center justify-around gap-16 min-w-[200%] animate-marquee group hover:[animation-play-state:paused]" 
+                   style={{animationDuration: '30s', minHeight: '80px'}}>
+                {/* First set of logos with enhanced styling */}
                 {[
                   { src: '/logos/stripe.svg', alt: 'Stripe' },
                   { src: '/logos/wise.svg', alt: 'Wise' },
                   { src: '/logos/flutterwave.svg', alt: 'Flutterwave' },
                   { src: '/logos/paystack.svg', alt: 'Paystack' },
-                  { src: '/logos/payoneer.svg', alt: 'Payoneer' },
+                  { src: '/logos/payoneer.svg', alt: 'Payoneer' }
                 ].map((logo, i) => (
-                  <img
+                  <div 
                     key={i}
-                    src={logo.src}
-                    alt={logo.alt}
-                    className="h-14 md:h-16 max-h-20 opacity-95 hover:opacity-100 transition-all drop-shadow-glow mx-6 relative z-10"
-                    style={{ minWidth: 120, objectFit: 'contain' }}
-                  />
+                    className="flex-shrink-0 transition-all duration-300 hover:scale-110 hover:-translate-y-1 mx-8 p-4 rounded-xl hover:bg-white/40 dark:hover:bg-gray-800/40"
+                  >
+                    <img
+                      src={logo.src}
+                      alt={logo.alt}
+                      className="h-14 md:h-16 max-h-20 opacity-90 hover:opacity-100 transition-all drop-shadow-md relative z-10"
+                      style={{ minWidth: 130, maxWidth: 160, objectFit: 'contain' }}
+                    />
+                  </div>
                 ))}
-                {/* Repeat logos for seamless loop */}
+                
+                {/* Duplicate set for continuous loop */}
                 {[
                   { src: '/logos/stripe.svg', alt: 'Stripe' },
                   { src: '/logos/wise.svg', alt: 'Wise' },
                   { src: '/logos/flutterwave.svg', alt: 'Flutterwave' },
                   { src: '/logos/paystack.svg', alt: 'Paystack' },
-                  { src: '/logos/payoneer.svg', alt: 'Payoneer' },
+                  { src: '/logos/payoneer.svg', alt: 'Payoneer' }
                 ].map((logo, i) => (
-                  <img
+                  <div 
                     key={i + 100}
-                    src={logo.src}
-                    alt={logo.alt}
-                    className="h-14 md:h-16 max-h-20 opacity-95 hover:opacity-100 transition-all drop-shadow-glow mx-6 relative z-10"
-                    style={{ minWidth: 120, objectFit: 'contain' }}
-                  />
+                    className="flex-shrink-0 transition-all duration-300 hover:scale-110 hover:-translate-y-1 mx-8 p-4 rounded-xl hover:bg-white/40 dark:hover:bg-gray-800/40"
+                  >
+                    <img
+                      src={logo.src}
+                      alt={logo.alt}
+                      className="h-14 md:h-16 max-h-20 opacity-90 hover:opacity-100 transition-all drop-shadow-md relative z-10"
+                      style={{ minWidth: 130, maxWidth: 160, objectFit: 'contain' }}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
+          </div>
+          
+          {/* Trust badge */}
+          <div className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full bg-friendly-blue/5 dark:bg-friendly-blue/10 border border-friendly-blue/20 text-sm text-friendly-blue dark:text-friendly-blue/90">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-9.618 5.04L3 21.075a22.92 22.92 0 006.522-1.671 22.915 22.915 0 005.478 1.671l.618-13.091z" />
+            </svg>
+            <span>Bank-level security for all transactions</span>
           </div>
         </div>
       </section>
@@ -685,24 +713,92 @@ const Index = () => {
         body { background: #0c0c0f; }
       `}</style>
 
-      {/* Footer */}
-      <footer className="bg-[#0c0c0f] border-t-0 py-10 mt-0">
-        <div className="container mx-auto px-4 max-w-3xl flex flex-col items-center justify-center gap-6">
-          <div className="flex flex-col md:flex-row items-center justify-between w-full gap-4">
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-2xl bg-gradient-to-r from-friendly-blue to-friendly-purple bg-clip-text text-transparent">Dealeeoo</span>
-              <span className="text-muted-foreground text-base">&copy; {new Date().getFullYear()} All rights reserved.</span>
+      {/* Enhanced Footer */}
+      <footer className="bg-gradient-to-b from-[#0c0c0f] to-[#151520] border-t border-gray-800/50 py-16 mt-0 relative overflow-hidden">
+        {/* Background decoration elements */}
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-friendly-blue/50 to-transparent"></div>
+        <div className="absolute -top-40 -left-40 w-80 h-80 bg-friendly-blue/5 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-friendly-purple/5 rounded-full blur-3xl"></div>
+        
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+            {/* Logo and branding section */}
+            <div className="md:col-span-4 flex flex-col space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="font-extrabold text-3xl bg-gradient-to-r from-friendly-blue to-friendly-purple bg-clip-text text-transparent animate-shimmer">Dealeeoo</span>
+              </div>
+              <p className="text-gray-400 text-sm max-w-xs">
+                The trusted platform for secure online transactions between parties who don't know each other yet.
+              </p>
+              <div className="mt-4">
+                <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} All rights reserved.</p>
+              </div>
             </div>
-            <nav className="flex gap-8 text-lg font-semibold">
-              <a href="#about" className="hover:text-friendly-blue transition">About</a>
-              <a href="#how" className="hover:text-friendly-blue transition">How it Works</a>
-              <a href="#faq" className="hover:text-friendly-blue transition">FAQ</a>
-              <a href="#contact" className="hover:text-friendly-blue transition">Contact</a>
-            </nav>
-            <div className="flex gap-6">
-              <a href="#" className="text-muted-foreground hover:text-friendly-blue"><svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M22.46 6c-.77.35-1.6.59-2.47.7a4.3 4.3 0 001.88-2.37 8.59 8.59 0 01-2.72 1.04A4.28 4.28 0 0016.11 4c-2.37 0-4.29 1.92-4.29 4.29 0 .34.04.67.11.99C7.69 9.13 4.07 7.38 1.64 4.7c-.37.64-.58 1.38-.58 2.17 0 1.5.76 2.82 1.92 3.6-.7-.02-1.36-.21-1.94-.53v.05c0 2.1 1.5 3.85 3.5 4.25-.36.1-.74.16-1.13.16-.28 0-.54-.03-.8-.08.54 1.7 2.1 2.94 3.95 2.97A8.6 8.6 0 012 19.54c-.29 0-.57-.02-.85-.05A12.13 12.13 0 007.29 21.5c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.36-.02-.54A8.18 8.18 0 0024 4.59a8.36 8.36 0 01-2.54.7z" fill="currentColor"/></svg></a>
-              <a href="#" className="text-muted-foreground hover:text-friendly-purple"><svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" fill="currentColor"/></svg></a>
-              <a href="#" className="text-muted-foreground hover:text-friendly-green"><svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M21.54 7.2c.02.16.02.32.02.48 0 4.89-3.72 10.53-10.53 10.53-2.09 0-4.04-.61-5.68-1.66.29.03.57.05.87.05 1.74 0 3.34-.59 4.62-1.59-1.63-.03-3-1.1-3.47-2.57.23.04.47.07.72.07.34 0 .67-.05.98-.13-1.7-.34-2.98-1.85-2.98-3.66v-.05c.5.28 1.08.45 1.7.47a3.67 3.67 0 01-1.63-3.06c0-.67.18-1.3.5-1.84a10.5 10.5 0 007.62 3.87c-.06-.27-.09-.55-.09-.84 0-2.02 1.64-3.66 3.66-3.66 1.05 0 2 .44 2.67 1.15.83-.16 1.6-.47 2.3-.89-.27.85-.85 1.56-1.6 2.01.74-.09 1.45-.28 2.11-.57-.5.74-1.13 1.39-1.86 1.91z" fill="currentColor"/></svg></a>
+            
+            {/* Quick links */}
+            <div className="md:col-span-2">
+              <h3 className="text-white font-bold mb-4 text-lg">Company</h3>
+              <ul className="space-y-3">
+                <li><a href="#about" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">About</a></li>
+                <li><a href="#contact" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">Contact</a></li>
+                <li><a href="#careers" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">Careers</a></li>
+                <li><a href="#press" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">Press</a></li>
+              </ul>
+            </div>
+            
+            <div className="md:col-span-2">
+              <h3 className="text-white font-bold mb-4 text-lg">Resources</h3>
+              <ul className="space-y-3">
+                <li><a href="#how" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">How it Works</a></li>
+                <li><a href="#faq" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">FAQ</a></li>
+                <li><a href="#support" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">Support</a></li>
+                <li><a href="#blog" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">Blog</a></li>
+              </ul>
+            </div>
+            
+            <div className="md:col-span-2">
+              <h3 className="text-white font-bold mb-4 text-lg">Legal</h3>
+              <ul className="space-y-3">
+                <li><a href="#terms" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">Terms</a></li>
+                <li><a href="#privacy" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">Privacy</a></li>
+                <li><a href="#cookies" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">Cookies</a></li>
+                <li><a href="#security" className="text-gray-400 hover:text-friendly-blue transition-colors duration-300 text-sm">Security</a></li>
+              </ul>
+            </div>
+            
+            {/* Newsletter signup */}
+            <div className="md:col-span-2">
+              <h3 className="text-white font-bold mb-4 text-lg">Connect</h3>
+              <div className="flex space-x-4 mb-6">
+                <a href="#" aria-label="Twitter" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-gray-400 hover:bg-friendly-blue hover:text-white transition-all duration-300 transform hover:scale-110">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.46 6c-.77.35-1.6.59-2.47.7a4.3 4.3 0 001.88-2.37 8.59 8.59 0 01-2.72 1.04A4.28 4.28 0 0016.11 4c-2.37 0-4.29 1.92-4.29 4.29 0 .34.04.67.11.99C7.69 9.13 4.07 7.38 1.64 4.7c-.37.64-.58 1.38-.58 2.17 0 1.5.76 2.82 1.92 3.6-.7-.02-1.36-.21-1.94-.53v.05c0 2.1 1.5 3.85 3.5 4.25-.36.1-.74.16-1.13.16-.28 0-.54-.03-.8-.08.54 1.7 2.1 2.94 3.95 2.97A8.6 8.6 0 012 19.54c-.29 0-.57-.02-.85-.05A12.13 12.13 0 007.29 21.5c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.36-.02-.54A8.18 8.18 0 0024 4.59a8.36 8.36 0 01-2.54.7z"/></svg>
+                </a>
+                <a href="#" aria-label="GitHub" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-gray-400 hover:bg-friendly-purple hover:text-white transition-all duration-300 transform hover:scale-110">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                </a>
+                <a href="#" aria-label="LinkedIn" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-gray-400 hover:bg-friendly-green hover:text-white transition-all duration-300 transform hover:scale-110">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a>
+              </div>
+              <h3 className="text-white font-bold mb-2 text-lg">Stay Updated</h3>
+              <div className="mt-3 flex">
+                <input type="email" placeholder="Email address" className="bg-gray-800 text-white px-4 py-2 rounded-l-lg text-sm focus:outline-none focus:ring-2 focus:ring-friendly-blue/50 w-full" />
+                <button className="bg-gradient-to-r from-friendly-blue to-friendly-purple text-white px-4 py-2 rounded-r-lg text-sm hover:opacity-90 transition-opacity">
+                  Subscribe
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Bottom section with extra links and info */}
+          <div className="mt-12 pt-8 border-t border-gray-800/50 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-500 text-xs mb-4 md:mb-0">
+              Dealeeoo is not a financial institution. We partner with regulated payment providers to ensure your money is safe.  
+            </p>
+            <div className="flex space-x-6">
+              <a href="#" className="text-gray-500 hover:text-friendly-blue text-xs">Sitemap</a>
+              <a href="#" className="text-gray-500 hover:text-friendly-blue text-xs">Accessibility</a>
+              <a href="#" className="text-gray-500 hover:text-friendly-blue text-xs">Disclaimer</a>
             </div>
           </div>
         </div>
