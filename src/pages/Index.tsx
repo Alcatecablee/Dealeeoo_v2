@@ -620,95 +620,9 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Payments Powered By Banner */}
-      <section className="container mx-auto px-4 max-w-7xl flex flex-col items-center justify-center py-12 mb-12">
-        <div className="bg-white/90 dark:bg-gray-900/90 rounded-3xl p-10 shadow-2xl flex flex-col items-center backdrop-blur-lg border border-white/20 dark:border-blue-900/30 w-full relative overflow-hidden transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(76,154,255,0.15)]">
-          {/* Background decorative elements */}
-          <div className="absolute -top-10 -left-10 w-40 h-40 bg-gradient-to-br from-friendly-blue/10 to-friendly-purple/10 rounded-full blur-3xl opacity-70"></div>
-          <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-gradient-to-tl from-friendly-purple/10 to-friendly-blue/10 rounded-full blur-3xl opacity-70"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-friendly-blue/2 via-friendly-purple/2 to-friendly-blue/2 opacity-30"></div>
-          
-          <h3 className="text-center text-xl md:text-2xl font-bold bg-gradient-to-r from-friendly-blue to-friendly-purple bg-clip-text text-transparent mb-2 tracking-wide drop-shadow-glow relative z-10">Payments powered by</h3>
-          <p className="text-center text-muted-foreground text-sm md:text-base mb-8 max-w-md">Secure transactions through trusted global payment partners</p>
-          
-          <div className="relative w-full">
-            {/* Gradient edge masks - enhanced with better color blending */}
-            <div className="pointer-events-none absolute left-0 top-0 h-full w-12 z-10" 
-                 style={{background: 'linear-gradient(to right, var(--tw-bg-opacity) ? rgba(255,255,255,0.9) : rgba(17,24,39,0.9), transparent)'}}></div>
-            <div className="pointer-events-none absolute right-0 top-0 h-full w-12 z-10" 
-                 style={{background: 'linear-gradient(to left, var(--tw-bg-opacity) ? rgba(255,255,255,0.9) : rgba(17,24,39,0.9), transparent)'}}></div>
-            
-            {/* Logo carousel with enhanced animations */}
-            <div className="overflow-hidden w-full px-12">
-              <div className="flex items-center justify-around gap-16 min-w-[200%] animate-marquee group hover:[animation-play-state:paused]" 
-                   style={{animationDuration: '30s', minHeight: '80px'}}>
-                {/* First set of logos with enhanced styling */}
-                {[
-                  { src: '/logos/stripe.svg', alt: 'Stripe' },
-                  { src: '/logos/wise.svg', alt: 'Wise' },
-                  { src: '/logos/flutterwave.svg', alt: 'Flutterwave' },
-                  { src: '/logos/paystack.svg', alt: 'Paystack' },
-                  { src: '/logos/payoneer.svg', alt: 'Payoneer' }
-                ].map((logo, i) => (
-                  <div 
-                    key={i}
-                    className="flex-shrink-0 transition-all duration-300 hover:scale-110 hover:-translate-y-1 mx-8 p-4 rounded-xl hover:bg-white/40 dark:hover:bg-gray-800/40"
-                  >
-                    <img
-                      src={logo.src}
-                      alt={logo.alt}
-                      className="h-14 md:h-16 max-h-20 opacity-90 hover:opacity-100 transition-all drop-shadow-md relative z-10"
-                      style={{ minWidth: 130, maxWidth: 160, objectFit: 'contain' }}
-                    />
-                  </div>
-                ))}
-                
-                {/* Duplicate set for continuous loop */}
-                {[
-                  { src: '/logos/stripe.svg', alt: 'Stripe' },
-                  { src: '/logos/wise.svg', alt: 'Wise' },
-                  { src: '/logos/flutterwave.svg', alt: 'Flutterwave' },
-                  { src: '/logos/paystack.svg', alt: 'Paystack' },
-                  { src: '/logos/payoneer.svg', alt: 'Payoneer' }
-                ].map((logo, i) => (
-                  <div 
-                    key={i + 100}
-                    className="flex-shrink-0 transition-all duration-300 hover:scale-110 hover:-translate-y-1 mx-8 p-4 rounded-xl hover:bg-white/40 dark:hover:bg-gray-800/40"
-                  >
-                    <img
-                      src={logo.src}
-                      alt={logo.alt}
-                      className="h-14 md:h-16 max-h-20 opacity-90 hover:opacity-100 transition-all drop-shadow-md relative z-10"
-                      style={{ minWidth: 130, maxWidth: 160, objectFit: 'contain' }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          {/* Trust badge */}
-          <div className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full bg-friendly-blue/5 dark:bg-friendly-blue/10 border border-friendly-blue/20 text-sm text-friendly-blue dark:text-friendly-blue/90">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-9.618 5.04L3 21.075a22.92 22.92 0 006.522-1.671 22.915 22.915 0 005.478 1.671l.618-13.091z" />
-            </svg>
-            <span>Bank-level security for all transactions</span>
-          </div>
-        </div>
-      </section>
+
 
       <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee 32s linear infinite;
-          will-change: transform;
-        }
-        .group:hover .animate-marquee {
-          animation-play-state: paused;
-        }
         html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         body { background: #0c0c0f; }
       `}</style>

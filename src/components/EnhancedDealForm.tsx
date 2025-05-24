@@ -82,10 +82,24 @@ export default function EnhancedDealForm({ onCancel, onSuccess }: EnhancedDealFo
     return errs;
   };
 
-  // Fee calculation (1%)
+  // Fee calculation based on amount tiers
   React.useEffect(() => {
     const amt = parseFloat(form.amount);
-    setFee(!isNaN(amt) && amt > 0 ? parseFloat((amt * 0.01).toFixed(2)) : 0);
+    if (isNaN(amt) || amt <= 0) {
+      setFee(0);
+    } else if (amt > 10000) {
+      // Enterprise tier - 4%
+      setFee(parseFloat((amt * 0.04).toFixed(2)));
+    } else if (amt > 3000) {
+      // Business tier - 3%
+      setFee(parseFloat((amt * 0.03).toFixed(2)));
+    } else if (amt > 100) {
+      // Freelancer tier - 2%
+      setFee(parseFloat((amt * 0.02).toFixed(2)));
+    } else {
+      // Hustler tier - 1%
+      setFee(parseFloat((amt * 0.01).toFixed(2)));
+    }
   }, [form.amount]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -325,8 +339,16 @@ export default function EnhancedDealForm({ onCancel, onSuccess }: EnhancedDealFo
       <div className="flex items-center justify-between bg-gradient-to-r from-gray-800 via-gray-900 to-gray-800 p-3 rounded shadow-inner">
         <div className="flex items-center gap-2">
           <FaExchangeAlt className="text-blue-400 animate-pulse text-2xl" />
-          <span className="font-bold text-lg text-gradient bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Hustler</span>
-          <span className="text-xs text-gray-400">(1% fee)</span>
+          <span className="font-bold text-lg text-gradient bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            {parseFloat(form.amount) > 10000 ? 'Enterprise' : 
+             parseFloat(form.amount) > 3000 ? 'Business' : 
+             parseFloat(form.amount) > 100 ? 'Freelancer' : 'Hustler'}
+          </span>
+          <span className="text-xs text-gray-400">
+            {parseFloat(form.amount) > 10000 ? '(4% fee)' : 
+             parseFloat(form.amount) > 3000 ? '(3% fee)' : 
+             parseFloat(form.amount) > 100 ? '(2% fee)' : '(1% fee)'}
+          </span>
         </div>
         <div>
           <span className="text-gray-300">Estimated Fee: </span>
@@ -372,4 +394,4 @@ export default function EnhancedDealForm({ onCancel, onSuccess }: EnhancedDealFo
     </div>
     </div>
   );
-} 
+}

@@ -24,7 +24,9 @@ interface DealFormData {
 
 const DealForm: React.FC = () => {
   const navigate = useNavigate();
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<DealFormData>();
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<DealFormData>();
+  // Watch the amount field to automatically update the fee
+  const watchAmount = watch('amount');
   const [error, setError] = useState<string | null>(null);
   const [participants, setParticipants] = useState<{ email: string; role: string }[]>([
     { email: '', role: 'buyer' },
@@ -153,11 +155,31 @@ const DealForm: React.FC = () => {
 
         <div className="flex items-center justify-between bg-muted rounded-lg px-4 py-3 mt-4">
           <div className="flex items-center gap-x-2 font-semibold">
-            <span className="mr-1">🛠️</span> Hustler <span className="text-xs font-normal">(1% fee)</span>
+            <span className="mr-1">
+              {Number(watchAmount) > 10000 ? '🏛️' : 
+               Number(watchAmount) > 3000 ? '📈' : 
+               Number(watchAmount) > 100 ? '💼' : '🛠️'}
+            </span> 
+            {Number(watchAmount) > 10000 ? 'Enterprise' : 
+             Number(watchAmount) > 3000 ? 'Business' : 
+             Number(watchAmount) > 100 ? 'Freelancer' : 'Hustler'} 
+            <span className="text-xs font-normal">
+              {Number(watchAmount) > 10000 ? '(4% fee)' : 
+               Number(watchAmount) > 3000 ? '(3% fee)' : 
+               Number(watchAmount) > 100 ? '(2% fee)' : '(1% fee)'}
+            </span>
           </div>
           <div className="flex items-baseline gap-x-1 font-semibold">
             <span className="text-base text-muted-foreground">$</span>
-            <span className="text-base text-primary">0.00</span>
+            <span className="text-base text-primary">
+              {Number(watchAmount) > 0 ? 
+                (Number(watchAmount) * 
+                  (Number(watchAmount) > 10000 ? 0.04 : 
+                   Number(watchAmount) > 3000 ? 0.03 : 
+                   Number(watchAmount) > 100 ? 0.02 : 0.01)
+                ).toFixed(2) : 
+                '0.00'}
+            </span>
           </div>
         </div>
 
