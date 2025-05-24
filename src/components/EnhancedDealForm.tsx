@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaDollarSign, FaEnvelope, FaFileUpload, FaCalendarAlt, FaExchangeAlt } from "react-icons/fa";
+import HelpSidebar from "./HelpSidebar";
 import dealService from '@/lib/api';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -169,10 +170,11 @@ export default function EnhancedDealForm({ onCancel, onSuccess }: EnhancedDealFo
   };
 
   return (
-    <form
-      className={`max-w-lg mx-auto bg-gray-900 text-white rounded-xl shadow-2xl p-8 space-y-6 border border-primary/30 transition-all duration-700 transform ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} animate-fadein`}
-      onSubmit={handleSubmit}
-    >
+    <div className={`w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-5 gap-6 transition-all duration-700 transform ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} animate-fadein`}>
+      <form
+        className="md:col-span-3 bg-gray-900 text-white rounded-xl shadow-2xl p-8 space-y-6 border border-primary/30"
+        onSubmit={handleSubmit}
+      >
       <h2 className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-gradient-x">Review & Start Deal</h2>
       {/* Deal Details */}
       <div>
@@ -363,5 +365,11 @@ export default function EnhancedDealForm({ onCancel, onSuccess }: EnhancedDealFo
         </button>
       </div>
     </form>
+    
+    {/* Help Sidebar */}
+    <div className="md:col-span-2">
+      <HelpSidebar />
+    </div>
+    </div>
   );
 } 
